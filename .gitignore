@@ -1,0 +1,31 @@
+.pio
+.vscode
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# PlatformIO-specific files
+*.d
+*.o
+*.a
+*.s
+
+# IDE-specific files
+.vscode/
+.idea/
+*.iml
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore VS Code C++ properties (auto-generated)
+.vscode/c_cpp_properties.json
+# Ignore VS Code launch configuration (auto-generated)
+.vscode/launch.json

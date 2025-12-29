@@ -1,0 +1,23 @@
+[
+    {
+        "speaker": "Dr. Jane Doe",
+        "title": "AI in Cybersecurity",
+        "time": "10:00 AM",
+        "room": "Room 101",
+        "description": "Exploring AI-driven security solutions."
+    },
+    {
+        "speaker": "Dr. John Doe",
+        "title": "AI in kill us",
+        "time": "10:00 AM",
+        "room": "Room 102",
+        "description": "When and How"
+    },
+    {
+        "speaker": "John Smith",
+        "title": "Hacking IoT Devices",
+        "time": "11:30 AM",
+        "room": "Room 202",
+        "description": "A deep dive into IoT vulnerabilities."
+    }
+]
