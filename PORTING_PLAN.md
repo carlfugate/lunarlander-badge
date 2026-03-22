@@ -14,6 +14,7 @@ Port the Lunar Lander game to the BSidesKC conference badge (ESP32-S3), delivere
 1. **Standalone** — Full game running locally, no network required
 2. **Spectator** — Badge watches live games via WiFi
 3. **Multiplayer** — Badge plays against others via game server
+4. **Offline Fallback** — If server is unreachable, multiplayer/spectator gracefully fall back to standalone mode. The badge always has the full physics engine locally.
 
 ---
 
@@ -73,7 +74,7 @@ test/
 
 ## Phase 1 — Standalone Single-Player
 
-Game runs 100% locally. No WiFi needed.
+Game runs 100% locally. No WiFi needed. This engine is also the offline fallback for all network modes.
 
 | Issue | Title | Type | Depends On |
 |-------|-------|------|------------|
@@ -122,11 +123,24 @@ Badge connects as a player with server-authoritative physics.
 | [#17](https://github.com/carlfugate/lunarlander-badge/issues/17) | Multiplayer hardware testing | testing | #16 |
 
 **Key details:**
-- No local physics — server is authoritative
+- Server is authoritative when connected — badge runs local physics as prediction/fallback
 - Badge sends input actions (`thrust_on/off`, `rotate_left/right/stop`)
 - Receives all players' state in telemetry, renders color-coded landers
 - Lobby: browse rooms, create/join, waiting lobby with player list, countdown
 - Game over: ranked results
+
+---
+
+## Offline Fallback Strategy
+
+The badge always ships with the full physics engine (Phase 1). Network modes layer on top:
+
+- **Standalone (Phase 1):** Local physics only. Always available.
+- **Spectator (Phase 2):** Server sends telemetry, badge renders. If server disconnects mid-game, show "Connection Lost" and return to menu. No local physics needed for spectating.
+- **Multiplayer (Phase 3):** Server is authoritative. Badge sends input, receives state. If server is unreachable at game start, offer standalone mode instead. If server disconnects mid-game, show "Connection Lost" and return to menu.
+- **Mode selection:** When player taps "Lander" in menu, show mode select: PLAY (standalone, always available) / SPECTATE (grayed out if no WiFi) / MULTIPLAYER (grayed out if no WiFi). WiFi status checked at mode select time.
+
+This means the Phase 1 physics/terrain/collision/scoring code is the foundation for ALL modes — it's never thrown away or bypassed.
 
 ---
 
