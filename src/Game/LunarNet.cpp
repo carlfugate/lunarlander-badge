@@ -12,6 +12,14 @@ static NetMode s_mode = NET_DISCONNECTED;
 static bool s_has_msg = false;
 static String s_msg_buf;
 
+// Lobby state
+static String s_room_id;
+static int s_player_count = 0;
+static bool s_is_creator = false;
+static bool s_lobby_update = false;
+static bool s_game_started = false;
+static String s_lobby_json;
+
 static void on_message(WebsocketsMessage msg) {
     s_msg_buf = msg.data();
     s_has_msg = true;
@@ -25,6 +33,12 @@ void net_init() {
     s_mode = NET_DISCONNECTED;
     s_has_msg = false;
     s_msg_buf = "";
+    s_room_id = "";
+    s_player_count = 0;
+    s_is_creator = false;
+    s_lobby_update = false;
+    s_game_started = false;
+    s_lobby_json = "";
 }
 
 bool net_spectate(const char *session_id) {
@@ -140,8 +154,42 @@ bool net_poll(GameState &gs) {
         return true;
     }
 
-    // Lobby messages (room_created, room_joined, player_list, countdown, game_started)
-    // are available via s_msg_buf for lobby UI to re-parse if needed
+    // Lobby messages
+    if (strcmp(type, "room_created") == 0) {
+        s_room_id = doc["room_id"] | "";
+        s_is_creator = true;
+        s_lobby_json = s_msg_buf;
+        s_lobby_update = true;
+        return false;
+    }
+
+    if (strcmp(type, "room_joined") == 0) {
+        s_room_id = doc["room_id"] | "";
+        s_lobby_json = s_msg_buf;
+        s_lobby_update = true;
+        return false;
+    }
+
+    if (strcmp(type, "player_list") == 0) {
+        s_player_count = doc["players"].size();
+        s_lobby_json = s_msg_buf;
+        s_lobby_update = true;
+        return false;
+    }
+
+    if (strcmp(type, "countdown") == 0) {
+        s_lobby_json = s_msg_buf;
+        s_lobby_update = true;
+        return false;
+    }
+
+    if (strcmp(type, "game_started") == 0) {
+        s_game_started = true;
+        s_lobby_json = s_msg_buf;
+        s_lobby_update = true;
+        return false;
+    }
+
     return false;
 }
 
@@ -155,11 +203,39 @@ void net_disconnect() {
     }
     s_mode = NET_DISCONNECTED;
     s_has_msg = false;
+    s_room_id = "";
+    s_player_count = 0;
+    s_is_creator = false;
+    s_lobby_update = false;
+    s_game_started = false;
+    s_lobby_json = "";
 }
+
+const char* net_get_room_id() { return s_room_id.c_str(); }
+int net_get_player_count() { return s_player_count; }
+bool net_has_lobby_update() { return s_lobby_update; }
+const char* net_get_lobby_json() { return s_lobby_json.c_str(); }
+bool net_is_creator() { return s_is_creator; }
+bool net_game_started() { return s_game_started; }
+void net_clear_lobby_flags() { s_lobby_update = false; }
 
 bool net_fetch_rooms(JsonDocument &doc) {
     HTTPClient http;
     String url = String("http://") + LN_SERVER_HOST + ":" + LN_SERVER_PORT + "/rooms";
+    http.begin(url);
+    int code = http.GET();
+    if (code != 200) {
+        http.end();
+        return false;
+    }
+    DeserializationError err = deserializeJson(doc, http.getString());
+    http.end();
+    return !err;
+}
+
+bool net_fetch_sessions(JsonDocument &doc) {
+    HTTPClient http;
+    String url = String("http://") + LN_SERVER_HOST + ":" + LN_SERVER_PORT + "/sessions";
     http.begin(url);
     int code = http.GET();
     if (code != 200) {

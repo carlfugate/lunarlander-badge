@@ -27,6 +27,16 @@ bool net_poll(GameState &gs);
 NetMode net_get_mode();
 void net_disconnect();
 bool net_fetch_rooms(JsonDocument &doc);
+bool net_fetch_sessions(JsonDocument &doc);
+
+// Lobby state getters
+const char* net_get_room_id();
+int net_get_player_count();
+bool net_has_lobby_update();
+const char* net_get_lobby_json();
+bool net_is_creator();
+bool net_game_started();
+void net_clear_lobby_flags();
 
 #endif // NATIVE_TEST
 #endif
