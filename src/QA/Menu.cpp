@@ -6,6 +6,7 @@
 #include "includes.h"   // Contains common definitions and includes
 #include "Hardware/BadgeRegistration.h"
 #include "Hardware/BadgeVersion.h"
+#include "Game/LunarState.h"
 
 void create_checkin_window();
 void create_credits_window();
@@ -490,6 +491,8 @@ void button_event_handler(lv_event_t * e) {
         create_bling_window();
     } else if (strcmp(label, "Check-In") == 0) {
         create_checkin_window();
+    } else if (strcmp(label, "Lander") == 0) {
+        lunar_lander_start();
     }
 }
 
@@ -497,7 +500,7 @@ void button_event_handler(lv_event_t * e) {
 // Display Main Menu Buttons
 //----------------------------------------------------
 void display_main_menu_buttons() {
-    const String buttons[] = {"RGBs", "LEDs", "Buzzer", "SD Card", "Battery", "Wifi", "OTA", "System", "Credits", "Schedule", "Bling", "Check-In"};
+    const String buttons[] = {"RGBs", "LEDs", "Buzzer", "SD Card", "Battery", "Wifi", "OTA", "System", "Credits", "Schedule", "Bling", "Check-In", "Lander"};
     int btn_count = sizeof(buttons) / sizeof(buttons[0]);
     int btns_per_row = 3;
     int btn_width = 78;

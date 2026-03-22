@@ -22,6 +22,7 @@
 #include "QA/PirateShipAnimation.h"
 #include "QA/ota.hpp"
 #include "QA/Menu.h"
+#include "Game/LunarState.h"
 #include "QA/QA_Test_Sequence.h"
 #include "QA/ntp_sync.h"
 
