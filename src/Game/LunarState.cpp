@@ -55,6 +55,7 @@ uint16_t game_calc_score(const GameState &gs) {
 #ifndef NATIVE_TEST
 #include <lvgl.h>
 #include <Arduino.h>
+#include <WiFi.h>
 #include "Game/LunarRenderer.h"
 #include "Game/LunarInput.h"
 #include "Game/LunarAudio.h"
@@ -67,6 +68,7 @@ static bool was_thrusting = false;
 
 static void game_tick_cb(lv_timer_t *t);
 static void start_game(uint8_t difficulty);
+static void show_mode_select();
 static void show_difficulty_select();
 static void show_game_over();
 
@@ -126,6 +128,77 @@ static void start_game(uint8_t difficulty) {
     renderer_init(game_screen);
     was_thrusting = false;
     game_timer = lv_timer_create(game_tick_cb, 16, NULL);
+}
+
+static void show_mode_select() {
+    lv_obj_clean(game_screen);
+    lv_obj_set_style_bg_color(game_screen, lv_color_black(), 0);
+
+    lv_obj_t *title = lv_label_create(game_screen);
+    lv_label_set_text(title, "LUNAR LANDER");
+    lv_obj_set_style_text_color(title, lv_color_white(), 0);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 20);
+
+    bool wifi = (WiFi.status() == WL_CONNECTED);
+
+    // PLAY button — always enabled
+    lv_obj_t *play_btn = lv_btn_create(game_screen);
+    lv_obj_set_size(play_btn, 140, 40);
+    lv_obj_align(play_btn, LV_ALIGN_CENTER, 0, -40);
+    lv_obj_set_style_bg_color(play_btn, lv_color_hex(0x2e7d32), 0);
+    lv_obj_add_event_cb(play_btn, [](lv_event_t *e) { show_difficulty_select(); }, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *pl = lv_label_create(play_btn);
+    lv_label_set_text(pl, "PLAY");
+    lv_obj_center(pl);
+
+    // SPECTATE button
+    lv_obj_t *spec_btn = lv_btn_create(game_screen);
+    lv_obj_set_size(spec_btn, 140, 40);
+    lv_obj_align(spec_btn, LV_ALIGN_CENTER, 0, 10);
+    if (!wifi) {
+        lv_obj_add_state(spec_btn, LV_STATE_DISABLED);
+        lv_obj_set_style_bg_color(spec_btn, lv_color_hex(0x555555), LV_STATE_DISABLED);
+        lv_obj_set_style_text_color(spec_btn, lv_color_hex(0x888888), LV_STATE_DISABLED);
+    }
+    lv_obj_add_event_cb(spec_btn, [](lv_event_t *e) {
+        lv_obj_t *scr = lv_obj_get_parent((lv_obj_t *)lv_event_get_target(e));
+        lv_obj_t *lbl = lv_label_create(scr);
+        lv_label_set_text(lbl, "Coming Soon");
+        lv_obj_set_style_text_color(lbl, lv_color_white(), 0);
+        lv_obj_align(lbl, LV_ALIGN_BOTTOM_MID, 0, -50);
+    }, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *sl = lv_label_create(spec_btn);
+    lv_label_set_text(sl, "SPECTATE");
+    lv_obj_center(sl);
+
+    // MULTIPLAYER button
+    lv_obj_t *mp_btn = lv_btn_create(game_screen);
+    lv_obj_set_size(mp_btn, 140, 40);
+    lv_obj_align(mp_btn, LV_ALIGN_CENTER, 0, 60);
+    if (!wifi) {
+        lv_obj_add_state(mp_btn, LV_STATE_DISABLED);
+        lv_obj_set_style_bg_color(mp_btn, lv_color_hex(0x555555), LV_STATE_DISABLED);
+        lv_obj_set_style_text_color(mp_btn, lv_color_hex(0x888888), LV_STATE_DISABLED);
+    }
+    lv_obj_add_event_cb(mp_btn, [](lv_event_t *e) {
+        lv_obj_t *scr = lv_obj_get_parent((lv_obj_t *)lv_event_get_target(e));
+        lv_obj_t *lbl = lv_label_create(scr);
+        lv_label_set_text(lbl, "Coming Soon");
+        lv_obj_set_style_text_color(lbl, lv_color_white(), 0);
+        lv_obj_align(lbl, LV_ALIGN_BOTTOM_MID, 0, -50);
+    }, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *ml = lv_label_create(mp_btn);
+    lv_label_set_text(ml, "MULTIPLAYER");
+    lv_obj_center(ml);
+
+    // BACK button
+    lv_obj_t *back = lv_btn_create(game_screen);
+    lv_obj_set_size(back, 80, 30);
+    lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -10);
+    lv_obj_add_event_cb(back, [](lv_event_t *e) { lunar_lander_stop(); }, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *bl = lv_label_create(back);
+    lv_label_set_text(bl, "BACK");
+    lv_obj_center(bl);
 }
 
 static void show_difficulty_select() {
@@ -192,7 +265,7 @@ void lunar_lander_start() {
     lv_obj_set_style_bg_color(game_screen, lv_color_black(), 0);
     lv_scr_load(game_screen);
     leds_idle();
-    show_difficulty_select();
+    show_mode_select();
 }
 
 void lunar_lander_stop() {
