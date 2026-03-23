@@ -146,6 +146,45 @@ static void draw_terrain(const Terrain &t) {
     }
 }
 
+static void draw_zone_indicator(const Terrain &t) {
+    // Show arrow pointing toward landing zone when it's off-screen
+    int16_t zx_mid = (t.zone_x1 + t.zone_x2) / 2;
+    int16_t sx = world_to_screen_x(zx_mid, cam);
+    int16_t sy = world_to_screen_y(t.zone_y, cam);
+    // If zone is on screen, skip
+    if (sx >= 0 && sx < LN_SCREEN_W && sy >= 0 && sy < LN_SCREEN_H) return;
+
+    lv_color_t yellow = lv_color_make(255, 255, 0);
+    // Clamp indicator to screen edges
+    int16_t ix = sx < 0 ? 8 : (sx >= LN_SCREEN_W ? LN_SCREEN_W - 8 : sx);
+    int16_t iy = sy < 0 ? 8 : (sy >= LN_SCREEN_H ? LN_SCREEN_H - 20 : sy);
+    // Draw small diamond marker
+    draw_line(canvas, ix, iy - 4, ix + 4, iy, yellow);
+    draw_line(canvas, ix + 4, iy, ix, iy + 4, yellow);
+    draw_line(canvas, ix, iy + 4, ix - 4, iy, yellow);
+    draw_line(canvas, ix - 4, iy, ix, iy - 4, yellow);
+}
+
+static void draw_touch_controls() {
+    lv_color_t dim = lv_color_make(60, 60, 60);
+    // Horizontal divider at mid-height
+    draw_line(canvas, 0, LN_SCREEN_H / 2, LN_SCREEN_W - 1, LN_SCREEN_H / 2, dim);
+    // Vertical divider on bottom half
+    draw_line(canvas, LN_SCREEN_W / 2, LN_SCREEN_H / 2, LN_SCREEN_W / 2, LN_SCREEN_H - 1, dim);
+
+    // Labels via pixels - just draw small text-like markers
+    // Top zone: "THRUST" indicator - small up-arrow at center top area
+    int16_t cx = LN_SCREEN_W / 2;
+    draw_line(canvas, cx, LN_SCREEN_H / 2 - 12, cx - 6, LN_SCREEN_H / 2 - 6, dim);
+    draw_line(canvas, cx, LN_SCREEN_H / 2 - 12, cx + 6, LN_SCREEN_H / 2 - 6, dim);
+    // Bottom-left: left-arrow
+    draw_line(canvas, LN_SCREEN_W / 4, LN_SCREEN_H * 3 / 4, LN_SCREEN_W / 4 - 6, LN_SCREEN_H * 3 / 4 + 4, dim);
+    draw_line(canvas, LN_SCREEN_W / 4, LN_SCREEN_H * 3 / 4, LN_SCREEN_W / 4 + 6, LN_SCREEN_H * 3 / 4 + 4, dim);
+    // Bottom-right: right-arrow
+    draw_line(canvas, LN_SCREEN_W * 3 / 4, LN_SCREEN_H * 3 / 4, LN_SCREEN_W * 3 / 4 - 6, LN_SCREEN_H * 3 / 4 + 4, dim);
+    draw_line(canvas, LN_SCREEN_W * 3 / 4, LN_SCREEN_H * 3 / 4, LN_SCREEN_W * 3 / 4 + 6, LN_SCREEN_H * 3 / 4 + 4, dim);
+}
+
 static void draw_lander(const Lander &l) {
     float s = sinf(l.rotation);
     float c = cosf(l.rotation);
@@ -199,8 +238,12 @@ static void update_hud(const GameState &gs) {
     float alt = terrain_height_at(gs.terrain, gs.lander.x) - gs.lander.y;
     if (alt < 0) alt = 0;
 
+    int spd_whole = (int)spd;
+    int spd_frac = ((int)(spd * 10.0f)) % 10;
+    if (spd_frac < 0) spd_frac = -spd_frac;
+
     lv_label_set_text_fmt(lbl_fuel, "Fuel: %d%%", fuel_pct);
-    lv_label_set_text_fmt(lbl_speed, "Spd: %.1f", (double)spd);
+    lv_label_set_text_fmt(lbl_speed, "Spd: %d.%d", spd_whole, spd_frac);
     lv_label_set_text_fmt(lbl_alt, "Alt: %d", (int)alt);
 
     // Warning for high speed near ground
@@ -222,6 +265,8 @@ void renderer_draw(const GameState &gs) {
     lv_canvas_fill_bg(canvas, lv_color_black(), LV_OPA_COVER);
     draw_stars();
     draw_terrain(gs.terrain);
+    draw_zone_indicator(gs.terrain);
+    draw_touch_controls();
     draw_lander(gs.lander);
     update_hud(gs);
 }
