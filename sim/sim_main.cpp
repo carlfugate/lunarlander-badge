@@ -85,14 +85,13 @@ static void draw(SDL_Renderer *r) {
                         gs.terrain.points[i][1] == gs.terrain.zone_y &&
                         gs.terrain.points[i + 1][1] == gs.terrain.zone_y);
         if (is_zone) {
-            // Thick bright yellow landing zone (3 lines)
+            // Thick bright yellow landing zone just below terrain surface
             SDL_SetRenderDrawColor(r, 255, 255, 0, 255);
             SDL_RenderDrawLine(r, zx(x1), zx(y1), zx(x2), zx(y2));
-            SDL_RenderDrawLine(r, zx(x1), zx(y1)-1, zx(x2), zx(y2)-1);
-            SDL_RenderDrawLine(r, zx(x1), zx(y1)-2, zx(x2), zx(y2)-2);
-            // Glow line above
+            SDL_RenderDrawLine(r, zx(x1), zx(y1)+1, zx(x2), zx(y2)+1);
+            SDL_RenderDrawLine(r, zx(x1), zx(y1)+2, zx(x2), zx(y2)+2);
             SDL_SetRenderDrawColor(r, 255, 200, 0, 255);
-            SDL_RenderDrawLine(r, zx(x1), zx(y1)-3, zx(x2), zx(y2)-3);
+            SDL_RenderDrawLine(r, zx(x1), zx(y1)+3, zx(x2), zx(y2)+3);
         } else {
             SDL_SetRenderDrawColor(r, 0, 200, 0, 255);
             SDL_RenderDrawLine(r, zx(x1), zx(y1), zx(x2), zx(y2));

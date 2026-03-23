@@ -139,10 +139,11 @@ static void draw_terrain(const Terrain &t) {
         bool is_zone = (t.points[i][0] >= t.zone_x1 && t.points[i + 1][0] <= t.zone_x2 &&
                         t.points[i][1] == t.zone_y && t.points[i + 1][1] == t.zone_y);
         draw_line(canvas, x1, y1, x2, y2, is_zone ? zone_color : green);
-        // Thicken landing zone: draw extra lines above for visibility
+        // Draw landing zone indicator just below terrain surface
         if (is_zone) {
-            draw_line(canvas, x1, y1 - 1, x2, y2 - 1, zone_color);
-            draw_line(canvas, x1, y1 - 2, x2, y2 - 2, lv_color_make(255, 200, 0));
+            draw_line(canvas, x1, y1 + 1, x2, y2 + 1, zone_color);
+            draw_line(canvas, x1, y1 + 2, x2, y2 + 2, zone_color);
+            draw_line(canvas, x1, y1 + 3, x2, y2 + 3, lv_color_make(255, 200, 0));
         }
     }
 }
