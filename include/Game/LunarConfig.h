@@ -1,13 +1,13 @@
 #ifndef LUNAR_CONFIG_H
 #define LUNAR_CONFIG_H
 
-// Physics
-#define LN_GRAVITY           30.0f
-#define LN_THRUST_POWER      60.0f
+// Physics — match web/mobile reference game (server_config.py defaults)
+#define LN_GRAVITY           1.62f
+#define LN_THRUST_POWER      8.0f
 #define LN_ROTATION_SPEED    3.0f
 #define LN_FUEL_CONSUMPTION  10.0f
 #define LN_INITIAL_FUEL      1000.0f
-#define LN_MAX_LANDING_SPEED 8.0f
+#define LN_MAX_LANDING_SPEED 5.0f
 #define LN_MAX_LANDING_ANGLE 0.3f
 #define LN_PHYSICS_DT        (1.0f / 60.0f)
 

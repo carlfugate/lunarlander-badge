@@ -2,34 +2,21 @@
 #include "Game/LunarConfig.h"
 #include <math.h>
 
-// Camera functions — always compiled (used by tests)
+// Camera functions — always compiled (used by simulator and tests)
+// Full-world view: entire 1200x800 world scaled to 320x240 screen
 void camera_update(Camera &cam, const Lander &l, int phase) {
-    if (phase == PHASE_MENU) {
-        cam.target_x = LN_WORLD_W / 2.0f;
-        cam.target_y = LN_WORLD_H / 2.0f;
-    } else {
-        cam.target_x = l.x;
-        cam.target_y = l.y;
-    }
-
-    float speed = 0.05f;
-    cam.x += (cam.target_x - cam.x) * speed;
-    cam.y += (cam.target_y - cam.y) * speed;
-
-    float half_w = LN_SCREEN_W / 2.0f;
-    float half_h = LN_SCREEN_H / 2.0f;
-    if (cam.x < half_w) cam.x = half_w;
-    if (cam.x > LN_WORLD_W - half_w) cam.x = LN_WORLD_W - half_w;
-    if (cam.y < half_h) cam.y = half_h;
-    if (cam.y > LN_WORLD_H - half_h) cam.y = LN_WORLD_H - half_h;
+    // No-op: full world always visible, matching web/mobile behavior
+    (void)cam; (void)l; (void)phase;
 }
 
 int16_t world_to_screen_x(float wx, const Camera &cam) {
-    return (int16_t)(wx - (cam.x - LN_SCREEN_W / 2));
+    (void)cam;
+    return (int16_t)(wx * LN_SCALE_X);
 }
 
 int16_t world_to_screen_y(float wy, const Camera &cam) {
-    return (int16_t)(wy - (cam.y - LN_SCREEN_H / 2));
+    (void)cam;
+    return (int16_t)(wy * LN_SCALE_Y);
 }
 
 #ifndef NATIVE_TEST
@@ -81,7 +68,7 @@ static void draw_line(lv_obj_t *c, int16_t x1, int16_t y1, int16_t x2, int16_t y
 
 void renderer_init(lv_obj_t *parent) {
     generate_stars();
-    cam = {LN_WORLD_W / 2.0f, LN_WORLD_H / 2.0f, LN_WORLD_W / 2.0f, LN_WORLD_H / 2.0f, 0.05f};
+    cam = {0, 0, 0, 0, 0};
 
     // Allocate canvas buffer — try PSRAM first
     size_t buf_size = LN_SCREEN_W * LN_SCREEN_H * 2;
@@ -152,6 +139,11 @@ static void draw_terrain(const Terrain &t) {
         bool is_zone = (t.points[i][0] >= t.zone_x1 && t.points[i + 1][0] <= t.zone_x2 &&
                         t.points[i][1] == t.zone_y && t.points[i + 1][1] == t.zone_y);
         draw_line(canvas, x1, y1, x2, y2, is_zone ? zone_color : green);
+        // Thicken landing zone: draw extra lines above for visibility
+        if (is_zone) {
+            draw_line(canvas, x1, y1 - 1, x2, y2 - 1, zone_color);
+            draw_line(canvas, x1, y1 - 2, x2, y2 - 2, lv_color_make(255, 200, 0));
+        }
     }
 }
 
@@ -274,7 +266,6 @@ void renderer_draw(const GameState &gs) {
     lv_canvas_fill_bg(canvas, lv_color_black(), LV_OPA_COVER);
     draw_stars();
     draw_terrain(gs.terrain);
-    draw_zone_indicator(gs.terrain);
     draw_touch_controls();
     draw_lander(gs.lander);
     update_hud(gs);
