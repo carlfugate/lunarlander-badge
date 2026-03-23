@@ -216,6 +216,64 @@ static void show_create_form() {
     lv_obj_center(bl);
 }
 
+// --- Session list for spectating ---
+
+static void session_item_cb(lv_event_t *e) {
+    const char *sid = (const char *)lv_event_get_user_data(e);
+    if (net_spectate(sid)) {
+        spectator_start(s_parent);
+    }
+}
+
+void lobby_show_sessions(lv_obj_t *parent) {
+    s_parent = parent;
+    lobby_cleanup_timer();
+    lv_obj_clean(s_parent);
+    lv_obj_set_style_bg_color(s_parent, lv_color_black(), 0);
+
+    lv_obj_t *title = lv_label_create(s_parent);
+    lv_label_set_text(title, "SPECTATE");
+    lv_obj_set_style_text_color(title, lv_color_white(), 0);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 5);
+
+    JsonDocument doc;
+    bool ok = net_fetch_sessions(doc);
+
+    if (!ok || doc.as<JsonArray>().size() == 0) {
+        lv_obj_t *empty = lv_label_create(s_parent);
+        lv_label_set_text(empty, ok ? "No active games" : "Server unreachable");
+        lv_obj_set_style_text_color(empty, lv_color_hex(0xaaaaaa), 0);
+        lv_obj_align(empty, LV_ALIGN_CENTER, 0, -20);
+    } else {
+        lv_obj_t *list = lv_list_create(s_parent);
+        lv_obj_set_size(list, LN_SCREEN_W - 20, 160);
+        lv_obj_align(list, LV_ALIGN_TOP_MID, 0, 25);
+        lv_obj_set_style_bg_color(list, lv_color_hex(0x111111), 0);
+
+        static char session_ids[8][64];
+        int idx = 0;
+        for (JsonObject sess : doc.as<JsonArray>()) {
+            if (idx >= 8) break;
+            const char *sid = sess["id"] | "???";
+            const char *name = sess["name"] | sid;
+            strncpy(session_ids[idx], sid, 63);
+            session_ids[idx][63] = '\0';
+
+            lv_obj_t *btn = lv_list_add_btn(list, NULL, name);
+            lv_obj_add_event_cb(btn, session_item_cb, LV_EVENT_CLICKED, session_ids[idx]);
+            idx++;
+        }
+    }
+
+    lv_obj_t *back = lv_btn_create(s_parent);
+    lv_obj_set_size(back, 80, 35);
+    lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -10);
+    lv_obj_add_event_cb(back, lobby_back_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *bl = lv_label_create(back);
+    lv_label_set_text(bl, "BACK");
+    lv_obj_center(bl);
+}
+
 // --- Room list (main lobby screen) ---
 static void room_item_cb(lv_event_t *e) {
     const char *room_id = (const char *)lv_event_get_user_data(e);
@@ -287,83 +345,6 @@ void lobby_show_rooms(lv_obj_t *parent) {
     lv_obj_t *back = lv_btn_create(s_parent);
     lv_obj_set_size(back, 80, 35);
     lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 55, -10);
-    lv_obj_add_event_cb(back, lobby_back_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *bl = lv_label_create(back);
-    lv_label_set_text(bl, "BACK");
-    lv_obj_center(bl);
-}
-
-// --- Spectator session browser ---
-static void session_item_cb(lv_event_t *e) {
-    const char *session_id = (const char *)lv_event_get_user_data(e);
-    if (!session_id) return;
-    if (net_spectate(session_id)) {
-        spectator_start(s_parent);
-    } else {
-        lv_obj_t *err = lv_label_create(s_parent);
-        lv_label_set_text(err, "Failed to connect");
-        lv_obj_set_style_text_color(err, lv_color_make(255, 60, 60), 0);
-        lv_obj_align(err, LV_ALIGN_BOTTOM_MID, 0, -45);
-    }
-}
-
-void lobby_show_sessions(lv_obj_t *parent) {
-    s_parent = parent;
-    lobby_cleanup_timer();
-    lv_obj_clean(s_parent);
-    lv_obj_set_style_bg_color(s_parent, lv_color_black(), 0);
-
-    lv_obj_t *title = lv_label_create(s_parent);
-    lv_label_set_text(title, "ACTIVE GAMES");
-    lv_obj_set_style_text_color(title, lv_color_white(), 0);
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 8);
-
-    JsonDocument doc;
-    bool ok = net_fetch_rooms(doc);
-
-    if (!ok || doc.as<JsonArray>().size() == 0) {
-        lv_obj_t *msg = lv_label_create(s_parent);
-        lv_label_set_text(msg, "No active games found");
-        lv_obj_set_style_text_color(msg, lv_color_hex(0xaaaaaa), 0);
-        lv_obj_align(msg, LV_ALIGN_CENTER, 0, 0);
-    } else {
-        lv_obj_t *list = lv_list_create(s_parent);
-        lv_obj_set_size(list, 280, 150);
-        lv_obj_align(list, LV_ALIGN_CENTER, 0, -10);
-        lv_obj_set_style_bg_color(list, lv_color_hex(0x111111), 0);
-
-        static char session_ids[8][64];
-        int idx = 0;
-        for (JsonObject room : doc.as<JsonArray>()) {
-            if (idx >= 8) break;
-            const char *id = room["id"] | "???";
-            const char *name = room["name"] | id;
-            int players = room["players"] | 1;
-
-            strncpy(session_ids[idx], id, 63);
-            session_ids[idx][63] = '\0';
-
-            char buf[64];
-            snprintf(buf, sizeof(buf), "%s  (%d player%s)", name, players, players == 1 ? "" : "s");
-            lv_obj_t *btn = lv_list_add_btn(list, NULL, buf);
-            lv_obj_add_event_cb(btn, session_item_cb, LV_EVENT_CLICKED, session_ids[idx]);
-            idx++;
-        }
-    }
-
-    // REFRESH button
-    lv_obj_t *ref_btn = lv_btn_create(s_parent);
-    lv_obj_set_size(ref_btn, 100, 30);
-    lv_obj_align(ref_btn, LV_ALIGN_BOTTOM_MID, -60, -10);
-    lv_obj_add_event_cb(ref_btn, [](lv_event_t *e) { lobby_show_sessions(s_parent); }, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *rl = lv_label_create(ref_btn);
-    lv_label_set_text(rl, "REFRESH");
-    lv_obj_center(rl);
-
-    // BACK button
-    lv_obj_t *back = lv_btn_create(s_parent);
-    lv_obj_set_size(back, 80, 30);
-    lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 60, -10);
     lv_obj_add_event_cb(back, lobby_back_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *bl = lv_label_create(back);
     lv_label_set_text(bl, "BACK");
