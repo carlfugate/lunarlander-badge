@@ -3,9 +3,19 @@
 #include <math.h>
 
 // Camera functions — always compiled (used by tests)
-void camera_update(Camera &cam, const Lander &l) {
-    cam.x = l.x;
-    cam.y = l.y;
+void camera_update(Camera &cam, const Lander &l, int phase) {
+    if (phase == PHASE_MENU) {
+        cam.target_x = LN_WORLD_W / 2.0f;
+        cam.target_y = LN_WORLD_H / 2.0f;
+    } else {
+        cam.target_x = l.x;
+        cam.target_y = l.y;
+    }
+
+    float speed = 0.05f;
+    cam.x += (cam.target_x - cam.x) * speed;
+    cam.y += (cam.target_y - cam.y) * speed;
+
     float half_w = LN_SCREEN_W / 2.0f;
     float half_h = LN_SCREEN_H / 2.0f;
     if (cam.x < half_w) cam.x = half_w;
@@ -71,8 +81,7 @@ static void draw_line(lv_obj_t *c, int16_t x1, int16_t y1, int16_t x2, int16_t y
 
 void renderer_init(lv_obj_t *parent) {
     generate_stars();
-    cam.x = LN_START_X;
-    cam.y = LN_START_Y;
+    cam = {LN_WORLD_W / 2.0f, LN_WORLD_H / 2.0f, LN_WORLD_W / 2.0f, LN_WORLD_H / 2.0f, 0.05f};
 
     // Allocate canvas buffer — try PSRAM first
     size_t buf_size = LN_SCREEN_W * LN_SCREEN_H * 2;
@@ -261,7 +270,7 @@ static void update_hud(const GameState &gs) {
 void renderer_draw(const GameState &gs) {
     if (!canvas) return;
 
-    camera_update(cam, gs.lander);
+    camera_update(cam, gs.lander, gs.phase);
     lv_canvas_fill_bg(canvas, lv_color_black(), LV_OPA_COVER);
     draw_stars();
     draw_terrain(gs.terrain);

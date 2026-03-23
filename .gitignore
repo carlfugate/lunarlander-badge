@@ -29,3 +29,6 @@ Thumbs.db
 .vscode/c_cpp_properties.json
 # Ignore VS Code launch configuration (auto-generated)
 .vscode/launch.json
+
+# Simulator binary
+sim/lunarlander_sim
