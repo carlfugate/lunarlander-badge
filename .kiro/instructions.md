@@ -56,7 +56,11 @@ settings per difficulty level. Run `pio test -e native` after to verify tests pa
 ## Project References
 
 - **Porting plan:** `PORTING_PLAN.md`
+- **Project structure:** `PROJECT_STRUCTURE.md`
 - **Task tracking:** [GitHub Issues](https://github.com/carlfugate/lunarlander-badge/issues)
+- **UI mockups:** `mockups/badge-mockups.html`
+- **Feature flags:** `include/FeatureFlags.h`
+- **Game config:** `include/Game/LunarConfig.h`
 - **Base firmware patterns:** `src/QA/Menu.cpp` (menu integration), `include/lv_conf.h` (LVGL config)
 - **Original game logic:** `~/Documents/github/lunarlander/server/game/` (physics.py, terrain.py, session.py)
 - **Badge hardware:** `include/pins.h`, `include/Hardware/`
