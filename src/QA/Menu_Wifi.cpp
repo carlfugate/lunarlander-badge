@@ -51,7 +51,7 @@ void create_wifi_window() {
 
     // Scan button
     lv_obj_t * scan_btn = lv_btn_create(cont);
-    lv_obj_set_size(scan_btn, 120, 50);
+    lv_obj_set_size(scan_btn, 120, 36);
     lv_obj_add_event_cb(scan_btn, [](lv_event_t * e) {
         create_wifi_scan_window();
     }, LV_EVENT_CLICKED, NULL);
@@ -78,6 +78,8 @@ void create_wifi_scan_window() {
     lv_obj_set_flex_align(flex_col, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_bg_color(flex_col, lv_color_hex(0x0a0a0f), LV_PART_MAIN);
     lv_obj_set_style_border_width(flex_col, 0, 0);
+    lv_obj_set_style_pad_row(flex_col, 4, 0);
+    lv_obj_set_scroll_dir(flex_col, LV_DIR_VER);
 
     // Create scanning status label
     lv_obj_t * status_label = lv_label_create(flex_col);
@@ -128,7 +130,7 @@ void create_wifi_scan_window() {
                 unique_ssids.insert(ssid);
                 
                 lv_obj_t * btn = lv_btn_create(flex_col);
-                lv_obj_set_size(btn, 200, 50);
+                lv_obj_set_size(btn, 200, 32);
                 lv_obj_add_event_cb(btn, ssid_selected_event_handler, LV_EVENT_CLICKED, NULL);
                 
                 char buf[100];
