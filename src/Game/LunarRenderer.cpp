@@ -123,6 +123,28 @@ static void draw_stars() {
     }
 }
 
+static void fill_terrain(const Terrain &t) {
+    lv_color_t fill = lv_color_make(20, 40, 20);
+    for (uint16_t i = 0; i + 1 < t.num_points; i++) {
+        int16_t x1 = world_to_screen_x(t.points[i][0], cam);
+        int16_t y1 = world_to_screen_y(t.points[i][1], cam);
+        int16_t x2 = world_to_screen_x(t.points[i + 1][0], cam);
+        int16_t y2 = world_to_screen_y(t.points[i + 1][1], cam);
+        if (x1 > x2) { int16_t tmp; tmp=x1; x1=x2; x2=tmp; tmp=y1; y1=y2; y2=tmp; }
+        if (x2 < 0 || x1 >= LN_SCREEN_W) continue;
+        for (int16_t x = (x1 < 0 ? 0 : x1); x <= (x2 >= LN_SCREEN_W ? LN_SCREEN_W - 1 : x2); x++) {
+            int16_t y;
+            if (x2 == x1) y = y1;
+            else y = y1 + (y2 - y1) * (x - x1) / (x2 - x1);
+            if (y < 0) y = 0;
+            if (y >= LN_SCREEN_H) continue;
+            for (int16_t row = y; row < LN_SCREEN_H; row++) {
+                lv_canvas_set_px_color(canvas, x, row, fill);
+            }
+        }
+    }
+}
+
 static void draw_terrain(const Terrain &t) {
     lv_color_t green = lv_color_make(0, 200, 0);
     lv_color_t zone_color = lv_color_make(255, 255, 0);
@@ -253,6 +275,18 @@ static void draw_lander(const Lander &l) {
         draw_line(canvas, fx1, fy1, ftx, fty, orange);
         draw_line(canvas, fx2, fy2, ftx, fty, orange);
     }
+
+    // Bright center dot for visibility at small scale
+    int16_t cdx = world_to_screen_x(l.x, cam);
+    int16_t cdy = world_to_screen_y(l.y - 15, cam);
+    lv_color_t bright = l.crashed ? lv_color_make(255, 0, 0) : lv_color_make(255, 255, 255);
+    if (cdx >= 1 && cdx < LN_SCREEN_W - 1 && cdy >= 1 && cdy < LN_SCREEN_H - 1) {
+        lv_canvas_set_px_color(canvas, cdx, cdy, bright);
+        lv_canvas_set_px_color(canvas, cdx-1, cdy, bright);
+        lv_canvas_set_px_color(canvas, cdx+1, cdy, bright);
+        lv_canvas_set_px_color(canvas, cdx, cdy-1, bright);
+        lv_canvas_set_px_color(canvas, cdx, cdy+1, bright);
+    }
 }
 
 static void update_hud(const GameState &gs) {
@@ -308,6 +342,7 @@ void renderer_draw(const GameState &gs) {
     camera_update(cam, gs.lander, gs.phase);
     lv_canvas_fill_bg(canvas, lv_color_black(), LV_OPA_COVER);
     draw_stars();
+    fill_terrain(gs.terrain);
     draw_terrain(gs.terrain);
     draw_touch_controls();
     draw_lander(gs.lander);
