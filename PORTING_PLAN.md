@@ -254,4 +254,23 @@ Manual checklists per phase:
 2. ~~**Touch feel**~~ — RESOLVED: Left/right split layout implemented (thrust left half, rotate right half).
 3. ~~**High scores**~~ — RESOLVED: SD card (`/lander_scores.dat`), top 5 scores.
 4. **Larger font** — Enable Montserrat 20/26 in lv_conf.h for score display (~5-10KB flash).
-5. **Server URL** — Configurable for local dev vs production. SD card config or hardcoded.
+5. ~~**Server URL**~~ — RESOLVED: Defaults in `LunarNet.h`, overridable via build flags (`-DLN_SERVER_HOST`).
+
+## Recent Changes
+
+### Visual Polish
+- Terrain fill below surface (dark green, direct RGB565 buffer write for performance)
+- Bright 3×3 center dot on lander for visibility at 0.267× scale
+- "Connecting..." status during online solo PHASE_WAITING
+
+### Online Solo Mode (MODE_ONLINE_SOLO)
+- Connects to server `/ws` endpoint, sends `start` message with difficulty
+- Sends input deltas (thrust_on/off, rotate_left/right/stop) to server
+- Polls server for authoritative state (telemetry, game_over)
+- 5-second timeout falls back to offline mode if server unreachable
+- Disconnects on game over and cleanup
+
+### Bug Fixes
+- #19: WiFi scan page overlap (smaller buttons, tighter padding, scroll)
+- #20: Credits screen overlap (tightened y positions, body anchored to TOP_MID)
+- #21: Bling + Lander crash (stop bling ticker before entering game)

@@ -13,8 +13,13 @@ enum NetMode {
     NET_PLAYING
 };
 
+// Server defaults (override via SD card /lander_server.txt)
+#ifndef LN_SERVER_HOST
 #define LN_SERVER_HOST "lunarlander.local"
+#endif
+#ifndef LN_SERVER_PORT
 #define LN_SERVER_PORT 8080
+#endif
 
 void net_init();
 bool net_spectate(const char *session_id);

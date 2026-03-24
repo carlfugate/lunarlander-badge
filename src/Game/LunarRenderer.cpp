@@ -124,7 +124,10 @@ static void draw_stars() {
 }
 
 static void fill_terrain(const Terrain &t) {
-    lv_color_t fill = lv_color_make(20, 40, 20);
+    // RGB565: R=20>>3=2, G=40>>2=10, B=20>>3=2 → 0x0542
+    const uint16_t fill565 = (2 << 11) | (10 << 5) | 2;
+    uint16_t *buf = (uint16_t *)canvas_buf;
+    const int stride = LN_SCREEN_W;
     for (uint16_t i = 0; i + 1 < t.num_points; i++) {
         int16_t x1 = world_to_screen_x(t.points[i][0], cam);
         int16_t y1 = world_to_screen_y(t.points[i][1], cam);
@@ -132,15 +135,14 @@ static void fill_terrain(const Terrain &t) {
         int16_t y2 = world_to_screen_y(t.points[i + 1][1], cam);
         if (x1 > x2) { int16_t tmp; tmp=x1; x1=x2; x2=tmp; tmp=y1; y1=y2; y2=tmp; }
         if (x2 < 0 || x1 >= LN_SCREEN_W) continue;
-        for (int16_t x = (x1 < 0 ? 0 : x1); x <= (x2 >= LN_SCREEN_W ? LN_SCREEN_W - 1 : x2); x++) {
-            int16_t y;
-            if (x2 == x1) y = y1;
-            else y = y1 + (y2 - y1) * (x - x1) / (x2 - x1);
+        int16_t sx = x1 < 0 ? 0 : x1;
+        int16_t ex = x2 >= LN_SCREEN_W ? LN_SCREEN_W - 1 : x2;
+        for (int16_t x = sx; x <= ex; x++) {
+            int16_t y = (x2 == x1) ? y1 : y1 + (y2 - y1) * (x - x1) / (x2 - x1);
             if (y < 0) y = 0;
             if (y >= LN_SCREEN_H) continue;
-            for (int16_t row = y; row < LN_SCREEN_H; row++) {
-                lv_canvas_set_px(canvas, x, row, fill, LV_OPA_COVER);
-            }
+            for (int16_t row = y; row < LN_SCREEN_H; row++)
+                buf[row * stride + x] = fill565;
         }
     }
 }
