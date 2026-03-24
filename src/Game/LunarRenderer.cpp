@@ -341,6 +341,16 @@ void renderer_draw(const GameState &gs) {
 
     camera_update(cam, gs.lander, gs.phase);
     lv_canvas_fill_bg(canvas, lv_color_black(), LV_OPA_COVER);
+
+    if (gs.phase == PHASE_WAITING) {
+        if (lbl_warn) {
+            lv_label_set_text(lbl_warn, "Connecting...");
+            lv_obj_set_style_text_color(lbl_warn, lv_color_make(0, 229, 255), 0);
+            lv_obj_clear_flag(lbl_warn, LV_OBJ_FLAG_HIDDEN);
+        }
+        return;
+    }
+
     draw_stars();
     fill_terrain(gs.terrain);
     draw_terrain(gs.terrain);
