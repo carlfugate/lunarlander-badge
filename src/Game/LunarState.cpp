@@ -517,6 +517,7 @@ static void show_game_over() {
     }
 
     lv_obj_t *result = lv_label_create(game_screen);
+    lv_obj_set_style_text_font(result, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(result, lv_color_white(), 0);
     if (gs.phase == PHASE_LANDED) {
         lv_label_set_text_fmt(result, "LANDED!  Score: %d", gs.score);

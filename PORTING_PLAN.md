@@ -253,7 +253,7 @@ Manual checklists per phase:
 1. ~~**Canvas resolution**~~ — RESOLVED: Full 320×240 in PSRAM, fallback to `malloc` if PSRAM unavailable.
 2. ~~**Touch feel**~~ — RESOLVED: Left/right split layout implemented (thrust left half, rotate right half).
 3. ~~**High scores**~~ — RESOLVED: SD card (`/lander_scores.dat`), top 5 scores.
-4. **Larger font** — Enable Montserrat 20/26 in lv_conf.h for score display (~5-10KB flash).
+4. ~~**Larger font**~~ — RESOLVED: Montserrat 20 enabled for game over display (~5KB flash).
 5. ~~**Server URL**~~ — RESOLVED: Defaults in `LunarNet.h`, overridable via build flags (`-DLN_SERVER_HOST`).
 
 ## Recent Changes
