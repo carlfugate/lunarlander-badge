@@ -1,11 +1,11 @@
 #include "QA/Bling.hpp"
+#include "QA/Menu.h"
 #include "Includes.h"
 #include "Hardware/NeoPixelControl.h"
 #include <Adafruit_NeoPixel.h>
 #include <Ticker.h>
 
-// Forward declaration for back button
-extern void create_main_menu(bool show_ota_check);
+// Forward declarations for symbols not in Menu.h
 extern "C" lv_style_t style_modern_btns[10];
 extern lv_obj_t* create_basic_window();
 
@@ -120,7 +120,7 @@ void create_bling_window() {
         BlingWindow = nullptr;
     }
     BlingWindow = create_basic_window();
-    lv_scr_load(BlingWindow);
+    load_screen_and_delete_old(BlingWindow);
     bling_ticker.detach(); // Stop animation when opening window
     bling_mode = 0;
 
@@ -136,13 +136,14 @@ void create_bling_window() {
         lv_label_set_text(label, bling_modes[i]);
         lv_obj_center(label);
     }
-    // Back button
+    // Themed back button
     lv_obj_t* back_btn = lv_btn_create(BlingWindow);
-    lv_obj_add_style(back_btn, &style_modern_btns[0], 0);
-    lv_obj_set_size(back_btn, 80, 40);
-    lv_obj_align(back_btn, LV_ALIGN_BOTTOM_MID, 0, -20);
+    lv_obj_set_size(back_btn, 80, 28);
+    lv_obj_align(back_btn, LV_ALIGN_BOTTOM_MID, 0, -8);
+    lv_obj_set_style_bg_color(back_btn, lv_color_hex(0x222222), LV_PART_MAIN);
     lv_obj_t* back_label = lv_label_create(back_btn);
-    lv_label_set_text(back_label, "Back");
+    lv_label_set_text(back_label, LV_SYMBOL_LEFT " BACK");
+    lv_obj_set_style_text_color(back_label, lv_color_hex(0x888888), LV_PART_MAIN);
     lv_obj_center(back_label);
     lv_obj_add_event_cb(back_btn, [](lv_event_t* e){ create_main_menu(false); }, LV_EVENT_CLICKED, NULL);
 }

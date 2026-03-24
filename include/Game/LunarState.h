@@ -6,6 +6,13 @@
 #include "LunarTerrain.h"
 #include <stdint.h>
 
+enum GameMode {
+    MODE_OFFLINE,
+    MODE_ONLINE_SOLO,
+    MODE_ONLINE_MULTI,
+    MODE_SPECTATE
+};
+
 enum GamePhase {
     PHASE_MENU,
     PHASE_PLAYING,
@@ -17,8 +24,11 @@ struct GameState {
     Lander lander;
     Terrain terrain;
     GamePhase phase;
+    GameMode mode;
     uint32_t start_ms;
     uint32_t elapsed_ms;
+    uint32_t last_tick_ms;  // tracks real time for fixed-step physics
+    uint32_t accum_ms;     // physics time accumulator
     uint8_t difficulty;
     uint16_t score;
 };

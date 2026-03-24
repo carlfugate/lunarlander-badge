@@ -169,59 +169,89 @@ static void draw_zone_indicator(const Terrain &t) {
 
 static void draw_touch_controls() {
     lv_color_t dim = lv_color_make(60, 60, 60);
-    // Horizontal divider at mid-height
-    draw_line(canvas, 0, LN_SCREEN_H / 2, LN_SCREEN_W - 1, LN_SCREEN_H / 2, dim);
-    // Vertical divider on bottom half
-    draw_line(canvas, LN_SCREEN_W / 2, LN_SCREEN_H / 2, LN_SCREEN_W / 2, LN_SCREEN_H - 1, dim);
+    // Vertical divider at mid-width (full height)
+    draw_line(canvas, LN_SCREEN_W / 2, 0, LN_SCREEN_W / 2, LN_SCREEN_H - 1, dim);
+    // Horizontal divider on right half only
+    draw_line(canvas, LN_SCREEN_W / 2, LN_SCREEN_H / 2, LN_SCREEN_W - 1, LN_SCREEN_H / 2, dim);
 
-    // Labels via pixels - just draw small text-like markers
-    // Top zone: "THRUST" indicator - small up-arrow at center top area
-    int16_t cx = LN_SCREEN_W / 2;
-    draw_line(canvas, cx, LN_SCREEN_H / 2 - 12, cx - 6, LN_SCREEN_H / 2 - 6, dim);
-    draw_line(canvas, cx, LN_SCREEN_H / 2 - 12, cx + 6, LN_SCREEN_H / 2 - 6, dim);
-    // Bottom-left: left-arrow
-    draw_line(canvas, LN_SCREEN_W / 4, LN_SCREEN_H * 3 / 4, LN_SCREEN_W / 4 - 6, LN_SCREEN_H * 3 / 4 + 4, dim);
-    draw_line(canvas, LN_SCREEN_W / 4, LN_SCREEN_H * 3 / 4, LN_SCREEN_W / 4 + 6, LN_SCREEN_H * 3 / 4 + 4, dim);
-    // Bottom-right: right-arrow
-    draw_line(canvas, LN_SCREEN_W * 3 / 4, LN_SCREEN_H * 3 / 4, LN_SCREEN_W * 3 / 4 - 6, LN_SCREEN_H * 3 / 4 + 4, dim);
-    draw_line(canvas, LN_SCREEN_W * 3 / 4, LN_SCREEN_H * 3 / 4, LN_SCREEN_W * 3 / 4 + 6, LN_SCREEN_H * 3 / 4 + 4, dim);
+    // Left zone: up-arrow (thrust) at center of left half
+    int16_t lx = LN_SCREEN_W / 4;
+    int16_t ly = LN_SCREEN_H / 2;
+    draw_line(canvas, lx, ly - 6, lx - 6, ly, dim);
+    draw_line(canvas, lx, ly - 6, lx + 6, ly, dim);
+    // Top-right: left-arrow (rotate CCW)
+    int16_t trx = LN_SCREEN_W * 3 / 4;
+    int16_t try_ = LN_SCREEN_H / 4;
+    draw_line(canvas, trx - 6, try_, trx, try_ - 4, dim);
+    draw_line(canvas, trx - 6, try_, trx, try_ + 4, dim);
+    // Bottom-right: right-arrow (rotate CW)
+    int16_t brx = LN_SCREEN_W * 3 / 4;
+    int16_t bry = LN_SCREEN_H * 3 / 4;
+    draw_line(canvas, brx + 6, bry, brx, bry - 4, dim);
+    draw_line(canvas, brx + 6, bry, brx, bry + 4, dim);
+}
+
+// Rotate local point by lander rotation, translate to world, project to screen
+static void lander_pt(const Lander &l, float lx, float ly, float s, float c, int16_t &sx, int16_t &sy) {
+    float wx = l.x + lx * c - ly * s;
+    float wy = l.y + lx * s + ly * c;
+    sx = world_to_screen_x(wx, cam);
+    sy = world_to_screen_y(wy, cam);
 }
 
 static void draw_lander(const Lander &l) {
     float s = sinf(l.rotation);
     float c = cosf(l.rotation);
+    lv_color_t col = l.crashed ? lv_color_make(255, 0, 0) : lv_color_white();
+    lv_color_t col2 = l.crashed ? lv_color_make(255, 0, 0) : lv_color_make(180, 180, 180);
 
-    // Triangle: nose up, two base corners
-    float pts[3][2] = {
-        { 0, -LANDER_SIZE},                          // nose
-        {-LANDER_SIZE / 2.0f,  LANDER_SIZE / 2.0f},  // left base
-        { LANDER_SIZE / 2.0f,  LANDER_SIZE / 2.0f}   // right base
-    };
-
-    int16_t sx[3], sy[3];
-    for (int i = 0; i < 3; i++) {
-        float rx = pts[i][0] * c - pts[i][1] * s;
-        float ry = pts[i][0] * s + pts[i][1] * c;
-        sx[i] = world_to_screen_x(l.x + rx, cam);
-        sy[i] = world_to_screen_y(l.y + ry, cam);
+    // Lunar module shape (matching web version, in world coords)
+    // Body: rect from (-12,-25) to (12,-5)
+    int16_t bx[4], by[4];
+    lander_pt(l, -12, -25, s, c, bx[0], by[0]);
+    lander_pt(l,  12, -25, s, c, bx[1], by[1]);
+    lander_pt(l,  12,  -5, s, c, bx[2], by[2]);
+    lander_pt(l, -12,  -5, s, c, bx[3], by[3]);
+    for (int i = 0; i < 4; i++) {
+        int ni = (i + 1) % 4;
+        draw_line(canvas, bx[i], by[i], bx[ni], by[ni], col);
     }
 
-    lv_color_t white = lv_color_white();
-    draw_line(canvas, sx[0], sy[0], sx[1], sy[1], white);
-    draw_line(canvas, sx[1], sy[1], sx[2], sy[2], white);
-    draw_line(canvas, sx[2], sy[2], sx[0], sy[0], white);
+    // Command module: rect from (-8,-30) to (8,-25)
+    int16_t cx[4], cy[4];
+    lander_pt(l, -8, -30, s, c, cx[0], cy[0]);
+    lander_pt(l,  8, -30, s, c, cx[1], cy[1]);
+    lander_pt(l,  8, -25, s, c, cx[2], cy[2]);
+    lander_pt(l, -8, -25, s, c, cx[3], cy[3]);
+    for (int i = 0; i < 4; i++) {
+        int ni = (i + 1) % 4;
+        draw_line(canvas, cx[i], cy[i], cx[ni], cy[ni], col);
+    }
+
+    // Landing legs
+    int16_t lx1, ly1, lx2, ly2, lx3, ly3;
+    // Left leg
+    lander_pt(l, -10, -5, s, c, lx1, ly1);
+    lander_pt(l, -16,  0, s, c, lx2, ly2);
+    lander_pt(l, -18,  0, s, c, lx3, ly3);
+    draw_line(canvas, lx1, ly1, lx2, ly2, col2);
+    draw_line(canvas, lx2, ly2, lx3, ly3, col2);
+    // Right leg
+    lander_pt(l,  10, -5, s, c, lx1, ly1);
+    lander_pt(l,  16,  0, s, c, lx2, ly2);
+    lander_pt(l,  18,  0, s, c, lx3, ly3);
+    draw_line(canvas, lx1, ly1, lx2, ly2, col2);
+    draw_line(canvas, lx2, ly2, lx3, ly3, col2);
 
     // Thrust flame
     if (l.thrusting && l.fuel > 0) {
-        float fx = 0;
-        float fy = LANDER_SIZE;
-        float rfx = fx * c - fy * s;
-        float rfy = fx * s + fy * c;
-        int16_t flame_x = world_to_screen_x(l.x + rfx, cam);
-        int16_t flame_y = world_to_screen_y(l.y + rfy, cam);
+        int16_t fx1, fy1, fx2, fy2, ftx, fty;
+        lander_pt(l, -5, -5, s, c, fx1, fy1);
+        lander_pt(l,  5, -5, s, c, fx2, fy2);
+        lander_pt(l,  0,  6, s, c, ftx, fty);
         lv_color_t orange = lv_color_make(255, 140, 0);
-        draw_line(canvas, sx[1], sy[1], flame_x, flame_y, orange);
-        draw_line(canvas, sx[2], sy[2], flame_x, flame_y, orange);
+        draw_line(canvas, fx1, fy1, ftx, fty, orange);
+        draw_line(canvas, fx2, fy2, ftx, fty, orange);
     }
 }
 
@@ -236,6 +266,7 @@ static void update_hud(const GameState &gs) {
         lv_obj_set_style_bg_color(bar_fuel, lv_color_make(0, 200, 0), LV_PART_INDICATOR);
     }
 
+    float vy = gs.lander.vy;
     float spd = lander_speed(gs.lander);
     float alt = terrain_height_at(gs.terrain, gs.lander.x) - gs.lander.y;
     if (alt < 0) alt = 0;
@@ -245,7 +276,18 @@ static void update_hud(const GameState &gs) {
     if (spd_frac < 0) spd_frac = -spd_frac;
 
     lv_label_set_text_fmt(lbl_fuel, "Fuel: %d%%", fuel_pct);
-    lv_label_set_text_fmt(lbl_speed, "Spd: %d.%d", spd_whole, spd_frac);
+
+    if (vy > 1.0f) {
+        lv_obj_set_style_text_color(lbl_speed, lv_color_make(255, 60, 60), 0);
+        lv_label_set_text_fmt(lbl_speed, "Spd: %d.%d v", spd_whole, spd_frac);
+    } else if (vy < -1.0f) {
+        lv_obj_set_style_text_color(lbl_speed, lv_color_make(60, 255, 60), 0);
+        lv_label_set_text_fmt(lbl_speed, "Spd: %d.%d ^", spd_whole, spd_frac);
+    } else {
+        lv_obj_set_style_text_color(lbl_speed, lv_color_white(), 0);
+        lv_label_set_text_fmt(lbl_speed, "Spd: %d.%d", spd_whole, spd_frac);
+    }
+
     lv_label_set_text_fmt(lbl_alt, "Alt: %d", (int)alt);
 
     // Warning for high speed near ground

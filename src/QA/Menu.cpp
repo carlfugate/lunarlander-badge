@@ -10,6 +10,7 @@
 
 void create_checkin_window();
 void create_credits_window();
+static void create_system_submenu();
 
 // External variables
 extern bool max17048_available;  // Defined in main.cpp
@@ -27,6 +28,18 @@ lv_obj_t * buzzer_slider_label = nullptr;
 lv_obj_t * ScheduleWindow = nullptr;
 
 bool performOtaUpdateCheck = true;
+
+static void log_heap(const char *tag) {
+    Serial.printf("[HEAP] %s: free=%d, min=%d\n", tag, ESP.getFreeHeap(), ESP.getMinFreeHeap());
+}
+
+void load_screen_and_delete_old(lv_obj_t *new_scr) {
+    lv_obj_t *old = lv_scr_act();
+    lv_scr_load(new_scr);
+    if (old && old != new_scr) {
+        lv_obj_del(old);
+    }
+}
 
 // Modern button style with gradient and shadow, now supports custom colors
 lv_style_t style_modern_btns[10];
@@ -74,21 +87,18 @@ lv_obj_t* create_modern_button(lv_obj_t* parent, const char* label_text, lv_even
     return btn;
 }
 
-// Helper to create a modern, white, padded window with row wrap flex
+// Helper to create a dark-themed window
 lv_obj_t* create_basic_window() {
     lv_obj_t* win = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(win, lv_color_hex(0xffffff), LV_PART_MAIN);
-    lv_obj_set_flex_flow(win, LV_FLEX_FLOW_ROW_WRAP);
-    lv_obj_set_style_pad_row(win, 10, 0);
-    lv_obj_set_style_pad_column(win, 10, 0);
-    lv_obj_set_style_pad_all(win, 20, 0);
+    lv_obj_set_style_bg_color(win, lv_color_hex(0x0a0a0f), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(win, LV_OPA_COVER, 0);
     return win;
 }
 
 lv_obj_t * create_styled_label(lv_obj_t * parent, const char * text, lv_align_t align, int x_offset, int y_offset) {
     lv_obj_t * label = lv_label_create(parent);
     lv_label_set_text(label, text);
-    lv_obj_set_style_text_color(label, lv_color_hex(0x000000), LV_PART_MAIN);
+    lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), LV_PART_MAIN);
     lv_obj_align(label, align, x_offset, y_offset);
     return label;
 }
@@ -117,21 +127,18 @@ void checkForOTAUpdate() {
 //----------------------------------------------------
 // Create a back button that returns to the main menu
 //----------------------------------------------------
-void create_back_button(lv_obj_t * parent) {
-    lv_obj_t * back_btn = lv_btn_create(parent);
-    lv_obj_set_size(back_btn, 80, 40);
-    lv_obj_align(back_btn, LV_ALIGN_BOTTOM_MID, 0, -20);
-    // When pressed, go back to the main menu
-    lv_obj_add_event_cb(back_btn, [](lv_event_t * e) {
-        if (ota_timer) {
-            lv_timer_del(ota_timer);  // Cancel the timer
-            ota_timer = nullptr;
-        }
-        create_main_menu(false);  // Skip the OTA update check
-    }, LV_EVENT_CLICKED, NULL);
+static void back_to_system_cb(lv_event_t *e) { create_system_submenu(); }
 
+void create_back_button(lv_obj_t * parent, lv_event_cb_t back_cb) {
+    lv_obj_t * back_btn = lv_btn_create(parent);
+    lv_obj_set_size(back_btn, 80, 28);
+    lv_obj_align(back_btn, LV_ALIGN_BOTTOM_MID, 0, -8);
+    lv_obj_set_style_bg_color(back_btn, lv_color_hex(0x222222), 0);
+    lv_obj_add_event_cb(back_btn, back_cb ? back_cb : [](lv_event_t *e) { create_main_menu(false); }, LV_EVENT_CLICKED, NULL);
     lv_obj_t * back_label = lv_label_create(back_btn);
-    lv_label_set_text(back_label, "Back");
+    lv_label_set_text(back_label, LV_SYMBOL_LEFT " BACK");
+    lv_obj_set_style_text_color(back_label, lv_color_hex(0x888888), 0);
+    lv_obj_center(back_label);
 }
 
 //----------------------------------------------------
@@ -139,7 +146,7 @@ void create_back_button(lv_obj_t * parent) {
 //----------------------------------------------------
 void create_ota_window() {
     lv_obj_t *ota_window = create_basic_window();
-    lv_scr_load(ota_window);
+    load_screen_and_delete_old(ota_window);
 
     // Get current version
     String codeVersion = BADGE_VERSION;
@@ -154,7 +161,7 @@ void create_ota_window() {
     snprintf(buf, sizeof(buf), "Current Version: %s\nOnline Version: %s", localVersion.c_str(), onlineVersion.c_str());
     lv_obj_t *label = lv_label_create(ota_window);
     lv_label_set_text(label, buf);
-    lv_obj_set_style_text_color(label, lv_color_hex(0x000000), LV_PART_MAIN);
+    lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), LV_PART_MAIN);
     lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 10);
 
     if (isVersionNewer(onlineVersion, localVersion)) {
@@ -178,15 +185,15 @@ void create_ota_window() {
     } else if (availableVersion == -1) {
         lv_obj_t *err_label = lv_label_create(ota_window);
         lv_label_set_text(err_label, "Could not check online version.");
-        lv_obj_set_style_text_color(err_label, lv_color_hex(0xFF0000), LV_PART_MAIN);
+        lv_obj_set_style_text_color(err_label, lv_color_hex(0xff4444), LV_PART_MAIN);
         lv_obj_align(err_label, LV_ALIGN_CENTER, 0, 30);
     } else {
         lv_obj_t *up_to_date = lv_label_create(ota_window);
         lv_label_set_text(up_to_date, "You are running the latest version.");
-        lv_obj_set_style_text_color(up_to_date, lv_color_hex(0x008000), LV_PART_MAIN);
+        lv_obj_set_style_text_color(up_to_date, lv_color_hex(0x00c853), LV_PART_MAIN);
         lv_obj_align(up_to_date, LV_ALIGN_CENTER, 0, 30);
     }
-    create_back_button(ota_window);
+    create_back_button(ota_window, back_to_system_cb);
 }
 
 //----------------------------------------------------
@@ -194,7 +201,7 @@ void create_ota_window() {
 //----------------------------------------------------
 void create_battery_window() {
     lv_obj_t *BatteryWindow = create_basic_window();
-    lv_scr_load(BatteryWindow);
+    load_screen_and_delete_old(BatteryWindow);
 
     char buf[100];
     float bat_cent = 0.0;
@@ -233,7 +240,7 @@ void create_battery_window() {
         lv_obj_set_style_line_color(scale, scale_color, LV_PART_MAIN);
     }
 
-    create_back_button(BatteryWindow);
+    create_back_button(BatteryWindow, back_to_system_cb);
 }
 
 //----------------------------------------------------
@@ -258,7 +265,7 @@ static void slider_event_cb(lv_event_t * e) {
 //----------------------------------------------------
 void create_buzzer_window() {
     BuzzerWindow = create_basic_window();
-    lv_scr_load(BuzzerWindow);
+    load_screen_and_delete_old(BuzzerWindow);
     
     // Initialize LEDC for buzzer by briefly setting up a tone channel
     // This prevents the "LEDC is not initialized" error
@@ -279,20 +286,19 @@ void create_buzzer_window() {
 
     // Add custom back button that stops buzzer before returning
     lv_obj_t * back_btn = lv_btn_create(BuzzerWindow);
-    lv_obj_set_size(back_btn, 80, 40);
-    lv_obj_align(back_btn, LV_ALIGN_BOTTOM_MID, 0, -20);
+    lv_obj_set_size(back_btn, 80, 28);
+    lv_obj_align(back_btn, LV_ALIGN_BOTTOM_MID, 0, -8);
+    lv_obj_set_style_bg_color(back_btn, lv_color_hex(0x222222), 0);
     lv_obj_add_event_cb(back_btn, [](lv_event_t * e) {
-        noTone(BUZZER_PIN);  // Stop any playing tone
-        if (ota_timer) {
-            lv_timer_del(ota_timer);
-            ota_timer = nullptr;
-        }
-        buzzer_slider_label = nullptr; // Reset label pointer to avoid stale pointer crash
-        BuzzerWindow = nullptr;         // Reset window pointer for safety
-        create_main_menu(false);
+        noTone(BUZZER_PIN);
+        buzzer_slider_label = nullptr;
+        BuzzerWindow = nullptr;
+        create_system_submenu();
     }, LV_EVENT_CLICKED, NULL);
     lv_obj_t * back_label = lv_label_create(back_btn);
-    lv_label_set_text(back_label, "Back");
+    lv_label_set_text(back_label, LV_SYMBOL_LEFT " BACK");
+    lv_obj_set_style_text_color(back_label, lv_color_hex(0x888888), 0);
+    lv_obj_center(back_label);
 }
 
 //----------------------------------------------------
@@ -326,7 +332,7 @@ void neopixel_event_handler(lv_event_t * e) {
 //----------------------------------------------------
 void create_neo_window(void) {
     NeoWindow = create_basic_window();
-    lv_scr_load(NeoWindow);
+    load_screen_and_delete_old(NeoWindow);
 
     const String buttons[] = {"Red", "Green", "Blue", "Off"};
     for (String name : buttons) {
@@ -338,23 +344,23 @@ void create_neo_window(void) {
         lv_obj_center(label);
     }
 
-    create_back_button(NeoWindow);
+    create_back_button(NeoWindow, back_to_system_cb);
 }
 
 //----------------------------------------------------
 //----------------------------------------------------
 void create_sd_card_window() {
     SDCardWindow = create_basic_window();
-    lv_scr_load(SDCardWindow);
+    load_screen_and_delete_old(SDCardWindow);
 
     File root = SD.open("/");
     if (!root) {
         Serial.println("Failed to open directory");
         lv_obj_t * error_label = lv_label_create(SDCardWindow);
         lv_label_set_text(error_label, "Failed to open SD card");
-        lv_obj_set_style_text_color(error_label, lv_color_hex(0xFF0000), LV_PART_MAIN);
+        lv_obj_set_style_text_color(error_label, lv_color_hex(0xff4444), LV_PART_MAIN);
         lv_obj_align(error_label, LV_ALIGN_CENTER, 0, 0);
-        create_back_button(SDCardWindow);
+        create_back_button(SDCardWindow, back_to_system_cb);
         return;
     }
     if (!root.isDirectory()) {
@@ -362,9 +368,9 @@ void create_sd_card_window() {
         root.close();
         lv_obj_t * error_label = lv_label_create(SDCardWindow);
         lv_label_set_text(error_label, "Root is not a directory");
-        lv_obj_set_style_text_color(error_label, lv_color_hex(0xFF0000), LV_PART_MAIN);
+        lv_obj_set_style_text_color(error_label, lv_color_hex(0xff4444), LV_PART_MAIN);
         lv_obj_align(error_label, LV_ALIGN_CENTER, 0, 0);
-        create_back_button(SDCardWindow);
+        create_back_button(SDCardWindow, back_to_system_cb);
         return;
     }
 
@@ -379,14 +385,14 @@ void create_sd_card_window() {
 
         lv_obj_t * label = lv_label_create(SDCardWindow);
         lv_label_set_text(label, buf);
-        lv_obj_set_style_text_color(label, lv_color_hex(0x000000), LV_PART_MAIN);
+        lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), LV_PART_MAIN);
         lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
 
         file = root.openNextFile();
     }
     
     root.close();
-    create_back_button(SDCardWindow);
+    create_back_button(SDCardWindow, back_to_system_cb);
 }
 
 //----------------------------------------------------
@@ -397,25 +403,48 @@ void create_credits_window();
 // Create Credits Window
 //----------------------------------------------------
 void create_credits_window(){
-    CreditsWindow = create_basic_window();
-    lv_scr_load(CreditsWindow);
+    log_heap("enter create_credits_window");
+    lv_obj_t *scr = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
+    load_screen_and_delete_old(scr);
 
+    lv_obj_t *t1 = lv_label_create(scr);
+    lv_label_set_text(t1, "BSidesKC");
+    lv_obj_set_style_text_color(t1, lv_color_hex(0x00e5ff), 0);
+    lv_obj_align(t1, LV_ALIGN_TOP_MID, 0, 15);
 
-    char buf[300];
-    snprintf(buf, sizeof(buf), "Thank you for using the QA Badge!\n\n"
-                               "Developed by:\n"
-                               "BPLabs\n"
-                               "https://bplabs.tech\n\n"
-                               "Powered by:\n"
-                               "LVGL\n"
-                               "https://lvgl.io");
+    lv_obj_t *t2 = lv_label_create(scr);
+    lv_label_set_text(t2, "2 0 2 6");
+    lv_obj_set_style_text_color(t2, lv_color_hex(0x00e5ff), 0);
+    lv_obj_align(t2, LV_ALIGN_TOP_MID, 0, 35);
 
-    lv_obj_t *label = lv_label_create(CreditsWindow);
-    lv_label_set_text(label, buf);
-    lv_obj_set_style_text_color(label, lv_color_hex(0x000000), LV_PART_MAIN);
-    lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 20);
+    lv_obj_t *t3 = lv_label_create(scr);
+    lv_label_set_text(t3, "April 25 - Kansas City");
+    lv_obj_set_style_text_color(t3, lv_color_hex(0x888888), 0);
+    lv_obj_align(t3, LV_ALIGN_TOP_MID, 0, 55);
 
-    create_back_button(CreditsWindow);
+    lv_obj_t *body = lv_label_create(scr);
+    lv_label_set_text(body, "Badge Hardware\nBadgePirates - bplabs.tech\n\n"
+                            "Lunar Lander Game\nAd Astra Protocol\n\n"
+                            "Powered by\nLVGL - ESP32-S3");
+    lv_obj_set_style_text_color(body, lv_color_hex(0x00c853), 0);
+    lv_obj_set_style_text_align(body, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(body, LV_ALIGN_CENTER, 0, 10);
+
+    lv_obj_t *tag = lv_label_create(scr);
+    lv_label_set_text(tag, "#BadgeLife");
+    lv_obj_set_style_text_color(tag, lv_color_hex(0x00e5ff), 0);
+    lv_obj_align(tag, LV_ALIGN_BOTTOM_MID, 0, -40);
+
+    lv_obj_t *back = lv_btn_create(scr);
+    lv_obj_set_size(back, 80, 28);
+    lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -8);
+    lv_obj_set_style_bg_color(back, lv_color_hex(0x222222), 0);
+    lv_obj_add_event_cb(back, [](lv_event_t *e) { create_main_menu(false); }, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *bl = lv_label_create(back);
+    lv_label_set_text(bl, LV_SYMBOL_LEFT " BACK");
+    lv_obj_set_style_text_color(bl, lv_color_hex(0x888888), 0);
+    lv_obj_center(bl);
 }
 
 //----------------------------------------------------
@@ -423,7 +452,7 @@ void create_credits_window(){
 //----------------------------------------------------
 void create_system_info_window() {
     SystemWindow = create_basic_window();
-    lv_scr_load(SystemWindow);
+    load_screen_and_delete_old(SystemWindow);
 
     uint32_t totalHeap = ESP.getHeapSize();
     uint32_t freeHeap = ESP.getFreeHeap();
@@ -450,10 +479,10 @@ void create_system_info_window() {
 
     lv_obj_t * label = lv_label_create(SystemWindow);
     lv_label_set_text(label, buf);
-    lv_obj_set_style_text_color(lv_scr_act(), lv_color_hex(0x000000), LV_PART_MAIN);
+    lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), LV_PART_MAIN);
     lv_obj_align(label, LV_ALIGN_TOP_LEFT, 10, 10); // Align to top-left for better readability
 
-    create_back_button(SystemWindow);
+    create_back_button(SystemWindow, back_to_system_cb);
 }
 
 //----------------------------------------------------
@@ -500,85 +529,251 @@ void button_event_handler(lv_event_t * e) {
 // Display Main Menu Buttons
 //----------------------------------------------------
 void display_main_menu_buttons() {
-    const String buttons[] = {"RGBs", "LEDs", "Buzzer", "SD Card", "Battery", "Wifi", "OTA", "System", "Credits", "Schedule", "Bling", "Check-In", "Lander"};
-    int btn_count = sizeof(buttons) / sizeof(buttons[0]);
-    int btns_per_row = 3;
-    int btn_width = 78;
-    int btn_height = 40;
-    int h_spacing = 8;
-    int v_spacing = 16;
-    int y0 = 10;
-    int total_width = btns_per_row * btn_width + (btns_per_row - 1) * h_spacing;
-    int screen_width = 320; // Adjust if your screen is different
-    int x_offset = (screen_width - total_width) / 2;
-    for (int i = 0; i < btn_count; ++i) {
-        lv_obj_t * btn = create_modern_button(main_menu, buttons[i].c_str(), button_event_handler, i % 10);
-        int row = i / btns_per_row;
-        int col = i % btns_per_row;
-        int x = x_offset + col * (btn_width + h_spacing);
-        int y = y0 + row * (btn_height + v_spacing);
-        lv_obj_set_size(btn, btn_width, btn_height);
-        lv_obj_set_pos(btn, x, y);
+    // Disable flex — use absolute positioning
+    lv_obj_remove_style_all(main_menu);
+    lv_obj_set_style_bg_color(main_menu, lv_color_hex(0x0a0a0f), 0);
+    lv_obj_set_style_bg_opa(main_menu, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(main_menu, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_pad_all(main_menu, 0, 0);
+
+    // Header bar with cyan accent line
+    lv_obj_t *hdr = lv_obj_create(main_menu);
+    lv_obj_set_size(hdr, 320, 26);
+    lv_obj_set_pos(hdr, 0, 0);
+    lv_obj_set_style_bg_color(hdr, lv_color_hex(0x0a0a0f), 0);
+    lv_obj_set_style_border_side(hdr, LV_BORDER_SIDE_BOTTOM, 0);
+    lv_obj_set_style_border_width(hdr, 1, 0);
+    lv_obj_set_style_border_color(hdr, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_radius(hdr, 0, 0);
+    lv_obj_set_style_pad_all(hdr, 0, 0);
+    lv_obj_clear_flag(hdr, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t *brand = lv_label_create(hdr);
+    lv_label_set_text(brand, "BSidesKC '26");
+    lv_obj_set_style_text_color(brand, lv_color_hex(0x00e5ff), 0);
+    lv_obj_align(brand, LV_ALIGN_LEFT_MID, 8, 0);
+
+    // Battery or USB indicator
+    lv_obj_t *batt = lv_label_create(hdr);
+    if (max17048_available) {
+        float pct = max17048.cellPercent();
+        if (pct > 100) pct = 100;
+        lv_label_set_text_fmt(batt, LV_SYMBOL_BATTERY_FULL " %d%%", (int)pct);
+    } else {
+        lv_label_set_text(batt, LV_SYMBOL_USB " USB");
     }
+    lv_obj_set_style_text_color(batt, lv_color_hex(0x888888), 0);
+    lv_obj_align(batt, LV_ALIGN_RIGHT_MID, -8, 0);
+
+    // Featured buttons: Lander + Schedule side by side
+    lv_obj_t *lander_btn = lv_btn_create(main_menu);
+    lv_obj_set_size(lander_btn, 148, 48);
+    lv_obj_set_pos(lander_btn, 8, 32);
+    lv_obj_set_style_bg_color(lander_btn, lv_color_hex(0x2e7d32), 0);
+    lv_obj_set_style_bg_grad_color(lander_btn, lv_color_hex(0x00c853), 0);
+    lv_obj_set_style_bg_grad_dir(lander_btn, LV_GRAD_DIR_VER, 0);
+    lv_obj_set_style_radius(lander_btn, 10, 0);
+    lv_obj_set_style_shadow_width(lander_btn, 8, 0);
+    lv_obj_set_style_shadow_color(lander_btn, lv_color_hex(0x00c853), 0);
+    lv_obj_set_style_shadow_opa(lander_btn, LV_OPA_30, 0);
+    lv_obj_add_event_cb(lander_btn, [](lv_event_t *e) { lunar_lander_start(); }, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *ll = lv_label_create(lander_btn);
+    lv_label_set_text(ll, LV_SYMBOL_PLAY " LANDER");
+    lv_obj_center(ll);
+
+    lv_obj_t *sched_btn = lv_btn_create(main_menu);
+    lv_obj_set_size(sched_btn, 148, 48);
+    lv_obj_set_pos(sched_btn, 164, 32);
+    lv_obj_set_style_bg_color(sched_btn, lv_color_hex(0x0277bd), 0);
+    lv_obj_set_style_bg_grad_color(sched_btn, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_bg_grad_dir(sched_btn, LV_GRAD_DIR_VER, 0);
+    lv_obj_set_style_radius(sched_btn, 10, 0);
+    lv_obj_set_style_shadow_width(sched_btn, 8, 0);
+    lv_obj_set_style_shadow_color(sched_btn, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_shadow_opa(sched_btn, LV_OPA_30, 0);
+    lv_obj_add_event_cb(sched_btn, [](lv_event_t *e) {
+        loadSchedule();
+        displaySchedule();
+    }, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *sl = lv_label_create(sched_btn);
+    lv_label_set_text(sl, LV_SYMBOL_LIST " SCHEDULE");
+    lv_obj_center(sl);
+
+    // Secondary buttons: 3x2 grid
+    struct { const char *label; lv_color_t bg; lv_color_t grad; lv_event_cb_t cb; } items[] = {
+        {LV_SYMBOL_OK " Check-In", lv_color_hex(0x4e54c8), lv_color_hex(0x8f94fb), [](lv_event_t *e) { create_checkin_window(); }},
+        {LV_SYMBOL_TINT " Bling",   lv_color_hex(0x614385), lv_color_hex(0x516395), [](lv_event_t *e) { create_bling_window(); }},
+        {LV_SYMBOL_WIFI " WiFi",    lv_color_hex(0x11998e), lv_color_hex(0x38ef7d), [](lv_event_t *e) { create_wifi_window(); }},
+        {LV_SYMBOL_FILE " Credits", lv_color_hex(0xf7971e), lv_color_hex(0xffe259), [](lv_event_t *e) { create_credits_window(); }},
+        {LV_SYMBOL_EYE_OPEN " CTF", lv_color_hex(0xff512f), lv_color_hex(0xdd2476), nullptr},
+        {LV_SYMBOL_SETTINGS,         lv_color_hex(0x333333), lv_color_hex(0x555555), [](lv_event_t *e) { create_system_submenu(); }},
+    };
+    for (int i = 0; i < 6; i++) {
+        lv_obj_t *btn = lv_btn_create(main_menu);
+        int col = i % 3;
+        int row = i / 3;
+        lv_obj_set_size(btn, 98, 38);
+        lv_obj_set_pos(btn, 8 + col * 104, 88 + row * 44);
+        lv_obj_set_style_bg_color(btn, items[i].bg, 0);
+        lv_obj_set_style_bg_grad_color(btn, items[i].grad, 0);
+        lv_obj_set_style_bg_grad_dir(btn, LV_GRAD_DIR_VER, 0);
+        lv_obj_set_style_radius(btn, 8, 0);
+        if (items[i].cb) {
+            lv_obj_add_event_cb(btn, items[i].cb, LV_EVENT_CLICKED, NULL);
+        } else {
+            lv_obj_add_state(btn, LV_STATE_DISABLED);
+            lv_obj_set_style_opa(btn, LV_OPA_50, LV_STATE_DISABLED);
+        }
+        lv_obj_t *lbl = lv_label_create(btn);
+        lv_label_set_text(lbl, items[i].label);
+        lv_obj_center(lbl);
+        // Dark text for yellow Credits button
+        if (i == 3) lv_obj_set_style_text_color(lbl, lv_color_hex(0x333333), 0);
+    }
+
+    // Mission control label
+    lv_obj_t *mc_label = lv_label_create(main_menu);
+    lv_label_set_text(mc_label, LV_SYMBOL_GPS " MISSION CONTROL");
+    lv_obj_set_style_text_color(mc_label, lv_color_hex(0x444455), 0);
+    lv_obj_set_pos(mc_label, 8, 168);
+
+    // Mission control ticker
+    lv_obj_t *ticker_bg = lv_obj_create(main_menu);
+    lv_obj_set_size(ticker_bg, 304, 22);
+    lv_obj_set_pos(ticker_bg, 8, 180);
+    lv_obj_set_style_bg_color(ticker_bg, lv_color_hex(0x111118), 0);
+    lv_obj_set_style_border_width(ticker_bg, 1, 0);
+    lv_obj_set_style_border_color(ticker_bg, lv_color_hex(0x222233), 0);
+    lv_obj_set_style_radius(ticker_bg, 4, 0);
+    lv_obj_set_style_pad_all(ticker_bg, 0, 0);
+    lv_obj_clear_flag(ticker_bg, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t *ticker = lv_label_create(ticker_bg);
+    lv_label_set_long_mode(ticker, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_obj_set_width(ticker, 290);
+    lv_label_set_text(ticker,
+        LV_SYMBOL_GPS " AD ASTRA PROTOCOL ACTIVE    "
+        LV_SYMBOL_CHARGE " SYSTEMS NOMINAL    "
+        LV_SYMBOL_WIFI " COMMS ONLINE    "
+        LV_SYMBOL_BELL " BSidesKC 2026 // APRIL 25 // KANSAS CITY    "
+        LV_SYMBOL_WARNING " LAUNCH SEQUENCE ARMED    ");
+    lv_obj_set_style_text_color(ticker, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_anim_duration(ticker, lv_anim_speed(30), 0);
+    lv_obj_align(ticker, LV_ALIGN_LEFT_MID, 4, 0);
+
+    // Version in bottom-right corner
+    lv_obj_t *ver = lv_label_create(main_menu);
+    lv_label_set_text(ver, "v" BADGE_VERSION);
+    lv_obj_set_style_text_color(ver, lv_color_hex(0x333333), 0);
+    lv_obj_align(ver, LV_ALIGN_BOTTOM_RIGHT, -8, -4);
+}
+
+static void sys_btn_cb(lv_event_t *e) {
+    const char *action = (const char *)lv_event_get_user_data(e);
+    if (strcmp(action, "rgbs") == 0) create_neo_window();
+    else if (strcmp(action, "leds") == 0) {
+        ledStatus = !ledStatus;
+        for (int i = 0; i < numLeds; i++) digitalWrite(ledPins[i], ledStatus);
+    }
+    else if (strcmp(action, "buzzer") == 0) create_buzzer_window();
+    else if (strcmp(action, "sd") == 0) create_sd_card_window();
+    else if (strcmp(action, "battery") == 0) create_battery_window();
+    else if (strcmp(action, "ota") == 0) create_ota_window();
+    else if (strcmp(action, "system") == 0) create_system_info_window();
+}
+
+static void create_system_submenu() {
+    log_heap("enter create_system_submenu");
+    lv_obj_t *scr = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
+    load_screen_and_delete_old(scr);
+
+    // Header
+    lv_obj_t *hdr = lv_label_create(scr);
+    lv_label_set_text(hdr, LV_SYMBOL_SETTINGS " System");
+    lv_obj_set_style_text_color(hdr, lv_color_hex(0x00e5ff), 0);
+    lv_obj_align(hdr, LV_ALIGN_TOP_LEFT, 8, 6);
+
+    // List items
+    static const char *labels[] = {"RGBs", "LEDs", "Buzzer", "SD Card", "Battery", "OTA Update", "System Info"};
+    static const char *actions[] = {"rgbs", "leds", "buzzer", "sd", "battery", "ota", "system"};
+    for (int i = 0; i < 7; i++) {
+        lv_obj_t *btn = lv_btn_create(scr);
+        lv_obj_set_size(btn, 304, 24);
+        lv_obj_set_pos(btn, 8, 28 + i * 26);
+        lv_obj_set_style_bg_color(btn, lv_color_hex(0x0a0a0f), 0);
+        lv_obj_set_style_border_side(btn, LV_BORDER_SIDE_BOTTOM, 0);
+        lv_obj_set_style_border_width(btn, 1, 0);
+        lv_obj_set_style_border_color(btn, lv_color_hex(0x222222), 0);
+        lv_obj_set_style_radius(btn, 0, 0);
+        lv_obj_set_style_pad_all(btn, 0, 0);
+        lv_obj_add_event_cb(btn, sys_btn_cb, LV_EVENT_CLICKED, (void *)actions[i]);
+        lv_obj_t *lbl = lv_label_create(btn);
+        lv_label_set_text(lbl, labels[i]);
+        lv_obj_set_style_text_color(lbl, lv_color_hex(0xcccccc), 0);
+        lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 4, 0);
+        lv_obj_t *arrow = lv_label_create(btn);
+        lv_label_set_text(arrow, LV_SYMBOL_RIGHT);
+        lv_obj_set_style_text_color(arrow, lv_color_hex(0x555555), 0);
+        lv_obj_align(arrow, LV_ALIGN_RIGHT_MID, -4, 0);
+    }
+
+    // Back button
+    lv_obj_t *back = lv_btn_create(scr);
+    lv_obj_set_size(back, 80, 28);
+    lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -8);
+    lv_obj_set_style_bg_color(back, lv_color_hex(0x222222), 0);
+    lv_obj_add_event_cb(back, [](lv_event_t *e) { create_main_menu(false); }, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *bl = lv_label_create(back);
+    lv_label_set_text(bl, LV_SYMBOL_LEFT " BACK");
+    lv_obj_set_style_text_color(bl, lv_color_hex(0x888888), 0);
+    lv_obj_center(bl);
 }
 
 //----------------------------------------------------
 // Create the Main Menu
 //----------------------------------------------------
 void create_main_menu(bool show_ota_check) {
-    init_modern_button_styles(); // Initialize modern button styles for colored buttons
-    main_menu = lv_obj_create(NULL);  // Create a new screen
-    lv_obj_set_style_bg_color(main_menu, lv_color_hex(0xffffff), LV_PART_MAIN);
-    lv_scr_load(main_menu);
+    log_heap("enter create_main_menu");
+    init_modern_button_styles();
+    main_menu = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(main_menu, lv_color_hex(0x0a0a0f), LV_PART_MAIN);
+    load_screen_and_delete_old(main_menu);
 
-    lv_obj_set_flex_flow(main_menu, LV_FLEX_FLOW_ROW_WRAP);
-    lv_obj_set_style_pad_row(main_menu, 10, 0);
-    lv_obj_set_style_pad_column(main_menu, 10, 0);
-    lv_obj_set_style_pad_all(main_menu, 20, 0);
+    if (show_ota_check && WiFi.status() == WL_CONNECTED) {
+        OTA ota;
+        int availableVersion = ota.getAvailableVersion();
+        String onlineVersion = availableVersion > 0 ? String(availableVersion / 100) + "." + String((availableVersion / 10) % 10) + "." + String(availableVersion % 10) : "?";
+        String localVersion = BADGE_VERSION;
+        if (isVersionNewer(onlineVersion, localVersion)) {
+            lv_obj_t *lbl = lv_label_create(main_menu);
+            char buf[100];
+            snprintf(buf, sizeof(buf), "Update: %s -> %s\nInstalling in 5s...", BADGE_VERSION, onlineVersion.c_str());
+            lv_label_set_text(lbl, buf);
+            lv_obj_set_style_text_color(lbl, lv_color_hex(0x00e5ff), 0);
+            lv_obj_align(lbl, LV_ALIGN_CENTER, 0, -20);
 
-    if (show_ota_check) {
-        if (WiFi.status() == WL_CONNECTED) {
-            OTA ota;
-            int availableVersion = ota.getAvailableVersion();
-            String onlineVersion = availableVersion > 0 ? String(availableVersion / 100) + "." + String((availableVersion / 10) % 10) + "." + String(availableVersion % 10) : "?";
-            String localVersion = BADGE_VERSION;
-            if (isVersionNewer(onlineVersion, localVersion)) {
-                lv_obj_t * countdown_label = lv_label_create(main_menu);
-                char buf[100];
-                snprintf(buf, sizeof(buf), "Update available! Current: %s, Available: %s. Checking in 5 seconds...", BADGE_VERSION, onlineVersion.c_str());
-                lv_label_set_text(countdown_label, buf);
-                lv_obj_align(countdown_label, LV_ALIGN_CENTER, 0, 50);
-
-                lv_obj_t * no_btn = lv_btn_create(main_menu);
-                lv_obj_set_size(no_btn, 120, 50);
-                lv_obj_align(no_btn, LV_ALIGN_CENTER, 0, 100);
-                lv_obj_add_event_cb(no_btn, [](lv_event_t * e) {
-                    if (ota_timer) {
-                        lv_timer_del(ota_timer);  // Cancel the timer
-                        ota_timer = nullptr;
-                    }
-                    lv_obj_clean(main_menu);
-                    display_main_menu_buttons();
-                }, LV_EVENT_CLICKED, NULL);
-
-                lv_obj_t * no_label = lv_label_create(no_btn);
-                lv_label_set_text(no_label, "Skip");
-
-                ota_timer = lv_timer_create([](lv_timer_t * timer) {
-                    OTA::checkOTASync();
-                    lv_timer_del(timer);  // Delete the timer after it has been triggered
-                }, 5000, NULL);
-            } else {
-                Serial.println("No updates found. Proceeding to menu.");
+            lv_obj_t *skip = lv_btn_create(main_menu);
+            lv_obj_set_size(skip, 100, 36);
+            lv_obj_align(skip, LV_ALIGN_CENTER, 0, 30);
+            lv_obj_set_style_bg_color(skip, lv_color_hex(0x333333), 0);
+            lv_obj_add_event_cb(skip, [](lv_event_t *e) {
+                if (ota_timer) { lv_timer_del(ota_timer); ota_timer = nullptr; }
+                lv_obj_clean(main_menu);
                 display_main_menu_buttons();
-            }
-        } else {
-            Serial.println("No Wi-Fi connection. Skipping OTA update check and proceeding to menu.");
-            display_main_menu_buttons();
+            }, LV_EVENT_CLICKED, NULL);
+            lv_obj_t *sl = lv_label_create(skip);
+            lv_label_set_text(sl, "Skip");
+            lv_obj_center(sl);
+
+            ota_timer = lv_timer_create([](lv_timer_t *t) {
+                OTA::checkOTASync();
+                lv_timer_del(t);
+            }, 5000, NULL);
+            return;
         }
-    } else {
-        display_main_menu_buttons();
     }
+    display_main_menu_buttons();
 }
 
 //----------------------------------------------------
@@ -586,7 +781,7 @@ void create_main_menu(bool show_ota_check) {
 //----------------------------------------------------
 void create_checkin_window() {
     lv_obj_t *checkin_window = create_basic_window();
-    lv_scr_load(checkin_window);
+    load_screen_and_delete_old(checkin_window);
 
     lv_obj_t *label = lv_label_create(checkin_window);
     lv_label_set_text(label, "Attempting to check in...");

@@ -1,4 +1,5 @@
 #include "QA/schedule.h"
+#include "QA/Menu.h"
 #include <ArduinoJson.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
@@ -158,7 +159,9 @@ void displaySchedule() {
         scheduleScreen = NULL;
     }
     scheduleScreen = lv_obj_create(NULL);
-    lv_scr_load(scheduleScreen);
+    lv_obj_set_style_bg_color(scheduleScreen, lv_color_hex(0x0a0a0f), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(scheduleScreen, LV_OPA_COVER, 0);
+    load_screen_and_delete_old(scheduleScreen);
 
     if (totalEntries == 0) {
         String errMsg = "No schedule data found!\nCheck Wi-Fi, SD card, or API.";
@@ -171,7 +174,7 @@ void displaySchedule() {
         }
         lv_obj_t *errLabel = lv_label_create(scheduleScreen);
         lv_label_set_text(errLabel, errMsg.c_str());
-        lv_obj_set_style_text_color(errLabel, lv_color_hex(0xFF0000), LV_PART_MAIN);
+        lv_obj_set_style_text_color(errLabel, lv_color_hex(0xff4444), LV_PART_MAIN);
         lv_obj_align(errLabel, LV_ALIGN_CENTER, 0, 0);
     } else {
         lv_obj_t *cont = lv_obj_create(scheduleScreen);
@@ -180,16 +183,17 @@ void displaySchedule() {
         lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_scroll_dir(cont, LV_DIR_VER);
         lv_obj_set_style_pad_all(cont, 6, 0);
-        lv_obj_set_style_bg_color(cont, lv_color_hex(0xf8f8ff), LV_PART_MAIN);
+        lv_obj_set_style_bg_color(cont, lv_color_hex(0x0a0a0f), LV_PART_MAIN);
+        lv_obj_set_style_border_width(cont, 0, 0);
 
         for (int i = 0; i < totalEntries; i++) {
             lv_obj_t *card = lv_obj_create(cont);
             lv_obj_set_size(card, 270, LV_SIZE_CONTENT);
             lv_obj_set_style_pad_all(card, 8, 0);
             lv_obj_set_style_radius(card, 10, 0);
-            lv_obj_set_style_bg_color(card, lv_color_hex(0xffffff), LV_PART_MAIN);
-            lv_obj_set_style_shadow_width(card, 8, 0);
-            lv_obj_set_style_shadow_color(card, lv_color_hex(0x888888), 0);
+            lv_obj_set_style_bg_color(card, lv_color_hex(0x222222), LV_PART_MAIN);
+            lv_obj_set_style_shadow_width(card, 0, 0);
+            lv_obj_set_style_border_width(card, 0, 0);
             lv_obj_set_style_margin_bottom(card, 8, 0);
 
             char buf[256];
@@ -198,18 +202,19 @@ void displaySchedule() {
             lv_label_set_text(label, buf);
             lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
             lv_obj_set_width(label, 250);
+            lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), LV_PART_MAIN);
             lv_obj_align(label, LV_ALIGN_TOP_LEFT, 0, 0);
         }
     }
 
-    // Move and resize the back button to bottom right, like main menu
+    // Themed back button
     lv_obj_t *backButton = lv_btn_create(scheduleScreen);
-    lv_obj_set_size(backButton, 90, 48); // Main menu button size
-    lv_obj_align(backButton, LV_ALIGN_BOTTOM_RIGHT, -10, -10);
+    lv_obj_set_size(backButton, 80, 28);
+    lv_obj_align(backButton, LV_ALIGN_BOTTOM_MID, 0, -8);
+    lv_obj_set_style_bg_color(backButton, lv_color_hex(0x222222), LV_PART_MAIN);
     lv_obj_t *backLabel = lv_label_create(backButton);
-    lv_label_set_text(backLabel, "Back");
+    lv_label_set_text(backLabel, LV_SYMBOL_LEFT " BACK");
+    lv_obj_set_style_text_color(backLabel, lv_color_hex(0x888888), LV_PART_MAIN);
     lv_obj_center(backLabel);
-    lv_obj_set_style_text_align(backLabel, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_align(backLabel, LV_ALIGN_CENTER, 0);
     lv_obj_add_event_cb(backButton, [](lv_event_t * e) { create_main_menu(false); }, LV_EVENT_CLICKED, NULL);
 }

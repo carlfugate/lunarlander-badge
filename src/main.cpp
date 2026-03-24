@@ -1,3 +1,4 @@
+#include "FeatureFlags.h"
 #include "Includes.h" // the Includes file with the whole list there
 #include "QA/ntp_sync.h" // Include the NTPManager class
 #include "QA/QA_Test_Sequence.h"
@@ -169,34 +170,47 @@ void setup() {
     pinMode(BUZZER_PIN, OUTPUT);
     digitalWrite(BUZZER_PIN, LOW);
 
-    // --- Terminal-style boot display ---
+    // --- Themed boot display ---
     displayBootTerminalHeader();
 
-    displayBootStatusLine("WiFi: Connecting...");
+#if FF_SKIP_BOOT_CHECKS
+    // Fast boot — skip WiFi, NTP, and registration
+    displayBootStatusLine("> Comms link ...........  [OK]");
+    displayBootStatusLine("> Power systems ........  [OK]");
+    displayBootStatusLine("> Sensors ..............  [OK]");
+    displayBootStatusLine("> Cargo bay ............  [OK]");
+    displayBootStatusLine("> Mission control ......  [OK]");
+    displayBootStatusLine("> Time sync ............  [OK]");
+    displayBootComplete(true);
+#else
+    tft.println("> Comms link ...........");
     scanWiFiNetworks();
     bool wifiConnected = connectToWiFiWithResult();
-    displayBootStatusLine(wifiConnected ? "WiFi: Connected" : "WiFi: Failed", wifiConnected);
+    displayBootStatusLine(wifiConnected ? "  [OK]" : "  [FAIL]", wifiConnected);
 
     char buf[64];
-    snprintf(buf, sizeof(buf), "Code Version: %s", BADGE_VERSION);
+    snprintf(buf, sizeof(buf), "> Power systems ........  v%s", BADGE_VERSION);
     displayBootStatusLine(buf);
 
-    snprintf(buf, sizeof(buf), "MAX17048: %s", max17048_available ? "Found" : "Not Detected");
+    snprintf(buf, sizeof(buf), "> Sensors ..............  %s", max17048_available ? "[OK]" : "[FAIL]");
     displayBootStatusLine(buf, max17048_available);
 
-    snprintf(buf, sizeof(buf), "SD Card: %s", SD.cardSize() > 0 ? "OK" : "Not Found");
+    snprintf(buf, sizeof(buf), "> Cargo bay ............  %s", SD.cardSize() > 0 ? "[OK]" : "[FAIL]");
     displayBootStatusLine(buf, SD.cardSize() > 0);
 
-    displayBootStatusLine("Badge: Registering...");
+    tft.println("> Mission control ......");
     int regResult = handleBadgeRegistrationWithResult();
-    displayBootStatusLine(regResult == 200 || regResult == 201 ? "Badge: Registered" : "Badge: Registration Failed", regResult == 200 || regResult == 201);
+    bool regOk = (regResult == 200 || regResult == 201);
+    displayBootStatusLine(regOk ? "  [OK]" : "  [FAIL]", regOk);
 
-    displayBootStatusLine("NTP: Syncing...");
+    tft.println("> Time sync ............");
     bool ntpOk = ntpManager.init();
-    displayBootStatusLine(ntpOk ? "NTP: Synced" : "NTP: Failed", ntpOk);
+    displayBootStatusLine(ntpOk ? "  [OK]" : "  [SKIP]", ntpOk);
 
-    displayBootStatusLine("Boot Complete.");
-    // --- End terminal-style boot display ---
+    displayBootComplete(wifiConnected && max17048_available && regOk);
+#endif
+    delay(1500);
+    // --- End themed boot display ---
 
     // Remove all old boot/status messages
 

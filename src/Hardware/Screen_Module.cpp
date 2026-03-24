@@ -85,10 +85,34 @@ void displayBootStatusLine(const char* msg, bool success) {
 }
 
 void displayBootTerminalHeader() {
-    bootColorScheme();
-    tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    tft.setCursor(0, 0);
-    tft.println("[Badge Boot Terminal]");
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextSize(2);
+    // "BSidesKC" = 8 chars * 12px = 96px, center on 320px
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.setCursor(112, 10);
+    tft.println("BSidesKC");
+    // "2 0 2 6" = 7 chars * 12px = 84px
+    tft.setTextColor(0x07FF, TFT_BLACK);
+    tft.setCursor(118, 32);
+    tft.println("2 0 2 6");
     tft.println("");
+    tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    tft.setTextSize(1);
+}
+
+void displayBootComplete(bool allOk) {
+    tft.println("");
+    if (allOk) {
+        tft.setTextColor(0x07FF, TFT_BLACK);  // Cyan
+        tft.println("> All systems nominal.");
+    } else {
+        tft.setTextColor(0xFE60, TFT_BLACK);  // Amber/orange
+        tft.println("> Partial systems. Offline mode.");
+    }
+    tft.println("");
+    tft.setTextColor(0x528A, TFT_BLACK);
+    // 28 chars * 6px = 168px at textSize 1, center on 320
+    tft.setCursor(76, 220);
+    tft.println("April 25, 2026 - Kansas City");
 }
 

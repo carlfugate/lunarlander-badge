@@ -3,8 +3,11 @@
 void game_init(GameState &gs, uint8_t difficulty, uint32_t seed) {
     gs.difficulty = difficulty;
     gs.phase = PHASE_MENU;
+    gs.mode = MODE_OFFLINE;
     gs.start_ms = 0;
     gs.elapsed_ms = 0;
+    gs.last_tick_ms = 0;
+    gs.accum_ms = 0;
     gs.score = 0;
     lander_init(gs.lander);
     terrain_generate(gs.terrain, difficulty, seed);
@@ -16,13 +19,29 @@ void game_tick(GameState &gs, bool thrust, int rotate_dir, uint32_t now_ms) {
     if (gs.phase == PHASE_MENU && (thrust || rotate_dir != 0)) {
         gs.phase = PHASE_PLAYING;
         gs.start_ms = now_ms;
+        gs.last_tick_ms = now_ms;
     }
 
     if (gs.phase != PHASE_PLAYING) return;
 
     gs.elapsed_ms = now_ms - gs.start_ms;
-    lander_update(gs.lander, thrust, rotate_dir, LN_PHYSICS_DT);
-    terrain_check_collision(gs.terrain, gs.lander);
+
+    // Fixed-step physics: run multiple steps if frame took longer than 1/60s
+    // This ensures physics runs at real-time speed regardless of frame rate
+    uint32_t dt_ms = now_ms - gs.last_tick_ms;
+    if (dt_ms > 100) dt_ms = 100;  // cap at 100ms to prevent spiral of death
+    gs.last_tick_ms = now_ms;
+
+    // Accumulate time and step in fixed increments of ~16.67ms (1/60s)
+    gs.accum_ms += dt_ms;
+    const uint32_t step_ms = 16;  // ~60Hz
+    while (gs.accum_ms >= step_ms) {
+        lander_update(gs.lander, thrust, rotate_dir, LN_PHYSICS_DT);
+        terrain_check_collision(gs.terrain, gs.lander);
+        if (gs.lander.landed || gs.lander.crashed) break;
+        gs.accum_ms -= step_ms;
+    }
+    if (gs.lander.landed || gs.lander.crashed) gs.accum_ms = 0;
 
     if (gs.lander.landed) {
         gs.phase = PHASE_LANDED;
@@ -61,9 +80,11 @@ uint16_t game_calc_score(const GameState &gs) {
 #include "Game/LunarAudio.h"
 #include "Game/LunarLobby.h"
 #include "Game/LunarNet.h"
+#include "Game/LunarScoreboard.h"
 #include "QA/Menu.h"
 
 static GameState gs;
+static Scoreboard scoreboard;
 static lv_timer_t *game_timer = NULL;
 static lv_timer_t *spectate_timer = NULL;
 static lv_timer_t *mp_timer = NULL;
@@ -302,12 +323,17 @@ static void spectator_show_result() {
     lv_obj_center(bl);
 }
 
+static GameMode pending_mode = MODE_OFFLINE;
+static lv_obj_t *mode_label = NULL;
+
 static void diff_btn_cb(lv_event_t *e) {
     uint8_t diff = (uint8_t)(uintptr_t)lv_event_get_user_data(e);
+    gs.mode = pending_mode;
     start_game(diff);
 }
 
 static void start_game(uint8_t difficulty) {
+    // TODO: MODE_ONLINE_SOLO — create server session, send inputs via WebSocket
     lv_obj_clean(game_screen);
     game_init(gs, difficulty, (uint32_t)millis());
     input_init();
@@ -323,14 +349,14 @@ static void show_mode_select() {
     lv_obj_t *title = lv_label_create(game_screen);
     lv_label_set_text(title, "LUNAR LANDER");
     lv_obj_set_style_text_color(title, lv_color_white(), 0);
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 20);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 10);
 
     bool wifi = (WiFi.status() == WL_CONNECTED);
 
     // PLAY button — always enabled
     lv_obj_t *play_btn = lv_btn_create(game_screen);
-    lv_obj_set_size(play_btn, 140, 40);
-    lv_obj_align(play_btn, LV_ALIGN_CENTER, 0, -40);
+    lv_obj_set_size(play_btn, 120, 32);
+    lv_obj_align(play_btn, LV_ALIGN_TOP_MID, 0, 35);
     lv_obj_set_style_bg_color(play_btn, lv_color_hex(0x2e7d32), 0);
     lv_obj_add_event_cb(play_btn, [](lv_event_t *e) { show_difficulty_select(); }, LV_EVENT_CLICKED, NULL);
     lv_obj_t *pl = lv_label_create(play_btn);
@@ -339,8 +365,8 @@ static void show_mode_select() {
 
     // SPECTATE button
     lv_obj_t *spec_btn = lv_btn_create(game_screen);
-    lv_obj_set_size(spec_btn, 140, 40);
-    lv_obj_align(spec_btn, LV_ALIGN_CENTER, 0, 10);
+    lv_obj_set_size(spec_btn, 120, 32);
+    lv_obj_align(spec_btn, LV_ALIGN_TOP_MID, 0, 75);
     if (!wifi) {
         lv_obj_add_state(spec_btn, LV_STATE_DISABLED);
         lv_obj_set_style_bg_color(spec_btn, lv_color_hex(0x555555), LV_STATE_DISABLED);
@@ -357,8 +383,8 @@ static void show_mode_select() {
 
     // MULTIPLAYER button
     lv_obj_t *mp_btn = lv_btn_create(game_screen);
-    lv_obj_set_size(mp_btn, 140, 40);
-    lv_obj_align(mp_btn, LV_ALIGN_CENTER, 0, 60);
+    lv_obj_set_size(mp_btn, 120, 32);
+    lv_obj_align(mp_btn, LV_ALIGN_TOP_MID, 0, 115);
     if (!wifi) {
         lv_obj_add_state(mp_btn, LV_STATE_DISABLED);
         lv_obj_set_style_bg_color(mp_btn, lv_color_hex(0x555555), LV_STATE_DISABLED);
@@ -375,8 +401,8 @@ static void show_mode_select() {
 
     // BACK button
     lv_obj_t *back = lv_btn_create(game_screen);
-    lv_obj_set_size(back, 80, 30);
-    lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -10);
+    lv_obj_set_size(back, 80, 28);
+    lv_obj_align(back, LV_ALIGN_TOP_MID, 0, 160);
     lv_obj_add_event_cb(back, [](lv_event_t *e) { lunar_lander_stop(); }, LV_EVENT_CLICKED, NULL);
     lv_obj_t *bl = lv_label_create(back);
     lv_label_set_text(bl, "BACK");
@@ -387,45 +413,95 @@ static void show_difficulty_select() {
     lv_obj_clean(game_screen);
     lv_obj_set_style_bg_color(game_screen, lv_color_black(), 0);
 
+    bool wifi = (WiFi.status() == WL_CONNECTED);
+    pending_mode = wifi ? MODE_ONLINE_SOLO : MODE_OFFLINE;
+
     lv_obj_t *title = lv_label_create(game_screen);
-    lv_label_set_text(title, "LUNAR LANDER");
+    lv_label_set_text(title, "SELECT DIFFICULTY");
     lv_obj_set_style_text_color(title, lv_color_white(), 0);
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 30);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 10);
 
     const char *labels[] = {"EASY", "MEDIUM", "HARD"};
     for (int i = 0; i < 3; i++) {
         lv_obj_t *btn = lv_btn_create(game_screen);
-        lv_obj_set_size(btn, 120, 40);
-        lv_obj_align(btn, LV_ALIGN_CENTER, 0, -30 + i * 50);
+        lv_obj_set_size(btn, 120, 32);
+        lv_obj_align(btn, LV_ALIGN_TOP_MID, 0, 35 + i * 40);
         lv_obj_add_event_cb(btn, diff_btn_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
         lv_obj_t *lbl = lv_label_create(btn);
         lv_label_set_text(lbl, labels[i]);
         lv_obj_center(lbl);
     }
 
+    // Mode toggle label
+    mode_label = lv_label_create(game_screen);
+    if (wifi) {
+        lv_label_set_text(mode_label, "Playing Online");
+        lv_obj_set_style_text_color(mode_label, lv_color_hex(0x00c853), 0);
+        lv_obj_add_flag(mode_label, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(mode_label, [](lv_event_t *e) {
+            if (pending_mode == MODE_ONLINE_SOLO) {
+                pending_mode = MODE_OFFLINE;
+                lv_label_set_text(mode_label, "Playing Offline");
+                lv_obj_set_style_text_color(mode_label, lv_color_hex(0x888888), 0);
+            } else {
+                pending_mode = MODE_ONLINE_SOLO;
+                lv_label_set_text(mode_label, "Playing Online");
+                lv_obj_set_style_text_color(mode_label, lv_color_hex(0x00c853), 0);
+            }
+        }, LV_EVENT_CLICKED, NULL);
+    } else {
+        lv_label_set_text(mode_label, "Playing Offline");
+        lv_obj_set_style_text_color(mode_label, lv_color_hex(0x888888), 0);
+    }
+    lv_obj_align(mode_label, LV_ALIGN_TOP_MID, 0, 160);
+
     lv_obj_t *back = lv_btn_create(game_screen);
-    lv_obj_set_size(back, 80, 30);
-    lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -10);
-    lv_obj_add_event_cb(back, [](lv_event_t *e) { lunar_lander_stop(); }, LV_EVENT_CLICKED, NULL);
+    lv_obj_set_size(back, 80, 28);
+    lv_obj_align(back, LV_ALIGN_TOP_MID, 0, 185);
+    lv_obj_add_event_cb(back, [](lv_event_t *e) { show_mode_select(); }, LV_EVENT_CLICKED, NULL);
     lv_obj_t *blbl = lv_label_create(back);
     lv_label_set_text(blbl, "BACK");
     lv_obj_center(blbl);
 }
 
 static void show_game_over() {
+    int rank = -1;
+    if (gs.phase == PHASE_LANDED && gs.score > 0) {
+        rank = scoreboard_add(scoreboard, gs.score, gs.difficulty);
+        scoreboard_save(scoreboard);
+    }
+
     lv_obj_t *result = lv_label_create(game_screen);
     lv_obj_set_style_text_color(result, lv_color_white(), 0);
-
     if (gs.phase == PHASE_LANDED) {
         lv_label_set_text_fmt(result, "LANDED!  Score: %d", gs.score);
     } else {
         lv_label_set_text(result, "CRASHED!");
     }
-    lv_obj_align(result, LV_ALIGN_CENTER, 0, -20);
+    lv_obj_align(result, LV_ALIGN_TOP_MID, 0, 10);
 
+    // Scoreboard
+    if (scoreboard.count > 0) {
+        lv_obj_t *hdr = lv_label_create(game_screen);
+        lv_label_set_text(hdr, "HIGH SCORES");
+        lv_obj_set_style_text_color(hdr, lv_color_hex(0x00e5ff), 0);
+        lv_obj_align(hdr, LV_ALIGN_TOP_MID, 0, 35);
+
+        static const char *diff_names[] = {"E", "M", "H"};
+        for (int i = 0; i < scoreboard.count; i++) {
+            lv_obj_t *row = lv_label_create(game_screen);
+            const char *d = (scoreboard.entries[i].difficulty < 3) ? diff_names[scoreboard.entries[i].difficulty] : "?";
+            lv_label_set_text_fmt(row, "%d. %5d [%s]", i + 1, scoreboard.entries[i].score, d);
+            bool is_current = (rank == i);
+            lv_obj_set_style_text_color(row, is_current ? lv_color_hex(0x00c853) : lv_color_hex(0xcccccc), 0);
+            lv_obj_align(row, LV_ALIGN_TOP_MID, 0, 52 + i * 16);
+        }
+    }
+
+    // Buttons
     lv_obj_t *again = lv_btn_create(game_screen);
-    lv_obj_set_size(again, 80, 30);
-    lv_obj_align(again, LV_ALIGN_CENTER, -50, 20);
+    lv_obj_set_size(again, 80, 28);
+    lv_obj_align(again, LV_ALIGN_BOTTOM_MID, -50, -10);
     lv_obj_add_event_cb(again, [](lv_event_t *e) {
         start_game(gs.difficulty);
     }, LV_EVENT_CLICKED, NULL);
@@ -434,9 +510,9 @@ static void show_game_over() {
     lv_obj_center(al);
 
     lv_obj_t *menu = lv_btn_create(game_screen);
-    lv_obj_set_size(menu, 80, 30);
-    lv_obj_align(menu, LV_ALIGN_CENTER, 50, 20);
-    lv_obj_add_event_cb(menu, [](lv_event_t *e) { lunar_lander_stop(); }, LV_EVENT_CLICKED, NULL);
+    lv_obj_set_size(menu, 80, 28);
+    lv_obj_align(menu, LV_ALIGN_BOTTOM_MID, 50, -10);
+    lv_obj_add_event_cb(menu, [](lv_event_t *e) { show_mode_select(); }, LV_EVENT_CLICKED, NULL);
     lv_obj_t *ml = lv_label_create(menu);
     lv_label_set_text(ml, "MENU");
     lv_obj_center(ml);
@@ -445,8 +521,9 @@ static void show_game_over() {
 void lunar_lander_start() {
     game_screen = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(game_screen, lv_color_black(), 0);
-    lv_scr_load(game_screen);
+    load_screen_and_delete_old(game_screen);
     leds_idle();
+    scoreboard_load(scoreboard);
     show_mode_select();
 }
 

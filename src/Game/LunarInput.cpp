@@ -23,9 +23,9 @@ InputState input_read() {
             lv_indev_get_point(indev, &point);
             lv_indev_state_t state = lv_indev_get_state(indev);
             if (state == LV_INDEV_STATE_PRESSED) {
-                if (point.y < LN_SCREEN_H / 2) {
+                if (point.x < LN_SCREEN_W / 2) {
                     s.thrust = true;
-                } else if (point.x < LN_SCREEN_W / 2) {
+                } else if (point.y < LN_SCREEN_H / 2) {
                     s.rotate_dir = -1;
                 } else {
                     s.rotate_dir = 1;

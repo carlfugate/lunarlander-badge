@@ -98,38 +98,41 @@ static void draw(SDL_Renderer *r) {
         }
     }
 
-    // Lander triangle (scaled from world coords)
+    // Lander — lunar module matching web version
     {
         const Lander &l = gs.lander;
         float s = sinf(l.rotation), c = cosf(l.rotation);
-        // Lander size in world coords — visible at the scaled-down view
-        float sz = 20.0f;
-        float pts[3][2] = {
-            { 0, -sz},
-            {-sz / 2.0f,  sz / 2.0f},
-            { sz / 2.0f,  sz / 2.0f}
+        auto pt = [&](float lx, float ly, int &ox, int &oy) {
+            float wx = l.x + lx * c - ly * s;
+            float wy = l.y + lx * s + ly * c;
+            ox = zx(world_to_screen_x(wx, cam));
+            oy = zx(world_to_screen_y(wy, cam));
         };
-        int lx[3], ly[3];
-        for (int i = 0; i < 3; i++) {
-            float rx = pts[i][0] * c - pts[i][1] * s;
-            float ry = pts[i][0] * s + pts[i][1] * c;
-            lx[i] = zx(world_to_screen_x(l.x + rx, cam));
-            ly[i] = zx(world_to_screen_y(l.y + ry, cam));
-        }
-        SDL_SetRenderDrawColor(r, 255, 255, 255, 255);
-        for (int i = 0; i < 3; i++) {
-            int ni = (i + 1) % 3;
-            SDL_RenderDrawLine(r, lx[i], ly[i], lx[ni], ly[ni]);
-        }
+
+        SDL_SetRenderDrawColor(r, l.crashed?255:255, l.crashed?0:255, l.crashed?0:255, 255);
+        // Body (-12,-25) to (12,-5)
+        int bx[4], by[4];
+        pt(-12,-25,bx[0],by[0]); pt(12,-25,bx[1],by[1]);
+        pt(12,-5,bx[2],by[2]); pt(-12,-5,bx[3],by[3]);
+        for(int i=0;i<4;i++){int ni=(i+1)%4; SDL_RenderDrawLine(r,bx[i],by[i],bx[ni],by[ni]);}
+        // Command module (-8,-30) to (8,-25)
+        int cx[4], cy[4];
+        pt(-8,-30,cx[0],cy[0]); pt(8,-30,cx[1],cy[1]);
+        pt(8,-25,cx[2],cy[2]); pt(-8,-25,cx[3],cy[3]);
+        for(int i=0;i<4;i++){int ni=(i+1)%4; SDL_RenderDrawLine(r,cx[i],cy[i],cx[ni],cy[ni]);}
+        // Landing legs
+        SDL_SetRenderDrawColor(r, l.crashed?255:180, l.crashed?0:180, l.crashed?0:180, 255);
+        int lx1,ly1,lx2,ly2,lx3,ly3;
+        pt(-10,-5,lx1,ly1); pt(-16,0,lx2,ly2); pt(-18,0,lx3,ly3);
+        SDL_RenderDrawLine(r,lx1,ly1,lx2,ly2); SDL_RenderDrawLine(r,lx2,ly2,lx3,ly3);
+        pt(10,-5,lx1,ly1); pt(16,0,lx2,ly2); pt(18,0,lx3,ly3);
+        SDL_RenderDrawLine(r,lx1,ly1,lx2,ly2); SDL_RenderDrawLine(r,lx2,ly2,lx3,ly3);
+        // Thrust flame
         if (l.thrusting && l.fuel > 0) {
-            float fx = 0, fy = sz;
-            float rfx = fx * c - fy * s;
-            float rfy = fx * s + fy * c;
-            int flx = zx(world_to_screen_x(l.x + rfx, cam));
-            int fly = zx(world_to_screen_y(l.y + rfy, cam));
+            int fx1,fy1,fx2,fy2,ftx,fty;
+            pt(-5,-5,fx1,fy1); pt(5,-5,fx2,fy2); pt(0,6,ftx,fty);
             SDL_SetRenderDrawColor(r, 255, 140, 0, 255);
-            SDL_RenderDrawLine(r, lx[1], ly[1], flx, fly);
-            SDL_RenderDrawLine(r, lx[2], ly[2], flx, fly);
+            SDL_RenderDrawLine(r,fx1,fy1,ftx,fty); SDL_RenderDrawLine(r,fx2,fy2,ftx,fty);
         }
     }
 
@@ -157,9 +160,12 @@ static void draw(SDL_Renderer *r) {
         snprintf(buf, sizeof(buf), "Fuel: %d%%", fuel_pct);
         draw_text(r, font, 8, 8, buf, white);
 
+        float vy = gs.lander.vy;
         float spd = lander_speed(gs.lander);
-        snprintf(buf, sizeof(buf), "Spd: %.1f", spd);
-        draw_text(r, font, 8, 28, buf, spd > LN_MAX_LANDING_SPEED ? red : white);
+        SDL_Color spd_col = (vy > 1.0f) ? red : (vy < -1.0f) ? SDL_Color{60,255,60,255} : white;
+        const char *arrow = (vy > 1.0f) ? " v" : (vy < -1.0f) ? " ^" : "";
+        snprintf(buf, sizeof(buf), "Spd: %.1f%s", spd, arrow);
+        draw_text(r, font, 8, 28, buf, spd_col);
 
         float alt = terrain_height_at(gs.terrain, gs.lander.x) - gs.lander.y;
         if (alt < 0) alt = 0;
@@ -226,6 +232,7 @@ int main(int argc, char *argv[]) {
     if (argc > 1) diff = atoi(argv[1]);
     game_init(gs, diff, (uint32_t)time(NULL));
     gs.phase = PHASE_MENU;
+    gs.mode = MODE_OFFLINE;
     gs.start_ms = SDL_GetTicks();
     cam = {0, 0, 0, 0, 0};
 
@@ -256,6 +263,7 @@ int main(int argc, char *argv[]) {
                     case SDLK_r:
                         game_init(gs, diff, (uint32_t)SDL_GetTicks());
                         gs.phase = PHASE_MENU;
+                        gs.mode = MODE_OFFLINE;
                         gs.start_ms = SDL_GetTicks();
                         thrust = false; rotate = 0;
                         break;

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BSidesKC Badge UI Mockups — 320×240</title>
+<style>
+  body { background: #1a1a2e; color: #fff; font-family: 'SF Mono', 'Menlo', 'Consolas', monospace; display: flex; flex-wrap: wrap; gap: 40px; padding: 40px; justify-content: center; }
+  h1 { width: 100%; text-align: center; color: #00e5ff; font-size: 24px; margin-bottom: 0; }
+  h2 { width: 100%; text-align: center; color: #888; font-size: 14px; margin-top: 4px; }
+  .mockup { position: relative; }
+  .mockup label { display: block; text-align: center; color: #888; font-size: 12px; margin-bottom: 8px; letter-spacing: 2px; text-transform: uppercase; }
+  .screen { width: 640px; height: 480px; background: #0a0a0f; border: 3px solid #333; border-radius: 8px; overflow: hidden; position: relative; image-rendering: pixelated; }
+  /* Everything inside is 2x scale of 320x240 */
+  .s { position: absolute; font-family: 'SF Mono', 'Menlo', 'Consolas', monospace; }
+  .star { background: #fff; width: 2px; height: 2px; position: absolute; border-radius: 50%; }
+  .star.dim { opacity: 0.4; }
+  .star.mid { opacity: 0.7; }
+
+  /* Boot screen styles */
+  .boot-title { color: #fff; font-size: 32px; font-weight: bold; letter-spacing: 4px; }
+  .boot-year { color: #00e5ff; font-size: 22px; letter-spacing: 8px; }
+  .boot-line { font-size: 16px; color: #00c853; line-height: 2; }
+  .boot-line .label { color: #888; }
+  .boot-line .dots { color: #444; }
+  .boot-line .ok { color: #00c853; font-weight: bold; }
+  .boot-line .fail { color: #ff4444; font-weight: bold; }
+  .boot-line.nominal { color: #00e5ff; font-weight: bold; }
+  .boot-footer { color: #555; font-size: 13px; }
+
+  /* Menu styles */
+  .header-bar { position: absolute; top: 0; left: 0; right: 0; height: 52px; border-bottom: 2px solid #00e5ff; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+  .header-bar .brand { color: #00e5ff; font-size: 20px; font-weight: bold; letter-spacing: 2px; }
+  .header-bar .batt { color: #888; font-size: 15px; }
+  .btn-featured { border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; color: #fff; letter-spacing: 2px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); cursor: pointer; }
+  .btn-featured.lander { background: linear-gradient(180deg, #2e7d32, #00c853); box-shadow: 0 4px 12px rgba(0,200,83,0.3); }
+  .btn-featured.schedule { background: linear-gradient(180deg, #0277bd, #00e5ff); box-shadow: 0 4px 12px rgba(0,229,255,0.3); }
+  .btn-secondary { border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #fff; letter-spacing: 1px; cursor: pointer; }
+  .btn-secondary.s1 { background: linear-gradient(180deg, #4e54c8, #8f94fb); }
+  .btn-secondary.s2 { background: linear-gradient(180deg, #614385, #516395); }
+  .btn-secondary.s3 { background: linear-gradient(180deg, #11998e, #38ef7d); }
+  .btn-secondary.s4 { background: linear-gradient(180deg, #f7971e, #ffe259); color: #333; }
+  .btn-secondary.s5 { background: linear-gradient(180deg, #ff512f, #dd2476); }
+  .btn-secondary.s6 { background: linear-gradient(180deg, #333, #555); color: #aaa; font-size: 22px; }
+
+  /* Game menu styles */
+  .game-title { color: #fff; font-size: 28px; font-weight: bold; letter-spacing: 3px; }
+  .btn-game { border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; color: #fff; letter-spacing: 2px; cursor: pointer; }
+  .btn-game.play { background: linear-gradient(180deg, #2e7d32, #00c853); box-shadow: 0 3px 10px rgba(0,200,83,0.3); }
+  .btn-game.spectate { background: linear-gradient(180deg, #0277bd, #00e5ff); }
+  .btn-game.multi { background: linear-gradient(180deg, #4e54c8, #8f94fb); }
+  .btn-game.disabled { background: #333; color: #666; box-shadow: none; }
+  .btn-game.back { background: #222; color: #888; font-size: 15px; font-weight: normal; }
+  .btn-game.easy { background: linear-gradient(180deg, #2e7d32, #43a047); }
+  .btn-game.medium { background: linear-gradient(180deg, #f57f17, #ffb300); color: #333; }
+  .btn-game.hard { background: linear-gradient(180deg, #c62828, #e53935); }
+  .mode-toggle { font-size: 15px; cursor: pointer; }
+  .mode-toggle.online { color: #00c853; }
+  .mode-toggle.offline { color: #888; }
+
+  /* Credits */
+  .credits-line { text-align: center; line-height: 2.2; }
+  .credits-line.title { color: #00e5ff; font-size: 24px; font-weight: bold; letter-spacing: 3px; }
+  .credits-line.subtitle { color: #888; font-size: 14px; }
+  .credits-line.heading { color: #fff; font-size: 16px; margin-top: 4px; }
+  .credits-line.detail { color: #00c853; font-size: 14px; }
+  .credits-line.hashtag { color: #00e5ff; font-size: 16px; letter-spacing: 2px; }
+
+  /* System sub-menu */
+  .sys-item { display: flex; align-items: center; height: 44px; border-bottom: 1px solid #222; padding: 0 24px; font-size: 16px; color: #ccc; cursor: pointer; }
+  .sys-item:hover { background: #1a1a2e; }
+  .sys-item .arrow { margin-left: auto; color: #555; }
+
+  /* Annotations */
+  .note { position: absolute; right: -220px; width: 200px; font-size: 11px; color: #666; border-left: 2px solid #333; padding-left: 8px; }
+</style>
+</head>
+<body>
+
+<h1>BSidesKC 2026 Badge — UI Mockups</h1>
+<h2>All screens shown at 2× scale (actual: 320×240 on ILI9341)</h2>
+
+<!-- ==================== BOOT SCREEN ==================== -->
+<div class="mockup">
+  <label>1 · Boot Sequence</label>
+  <div class="screen">
+    <!-- Stars -->
+    <div class="star" style="left:45px;top:30px"></div>
+    <div class="star dim" style="left:120px;top:65px"></div>
+    <div class="star mid" style="left:520px;top:22px"></div>
+    <div class="star" style="left:380px;top:80px"></div>
+    <div class="star dim" style="left:590px;top:55px"></div>
+    <div class="star mid" style="left:200px;top:15px"></div>
+    <div class="star" style="left:460px;top:45px"></div>
+    <div class="star dim" style="left:80px;top:90px"></div>
+    <div class="star mid" style="left:310px;top:35px"></div>
+    <div class="star" style="left:555px;top:95px"></div>
+
+    <div class="s boot-title" style="top:24px; left:0; right:0; text-align:center; width:100%;">BSidesKC</div>
+    <div class="s boot-year" style="top:64px; left:0; right:0; text-align:center; width:100%;">2 0 2 6</div>
+
+    <div class="s boot-line" style="top:130px; left:40px;">
+      <span class="label">&gt; Comms link</span>
+      <span class="dots"> .............. </span>
+      <span class="ok">[OK]</span>
+    </div>
+    <div class="s boot-line" style="top:162px; left:40px;">
+      <span class="label">&gt; Navigation</span>
+      <span class="dots"> .............. </span>
+      <span class="ok">[OK]</span>
+    </div>
+    <div class="s boot-line" style="top:194px; left:40px;">
+      <span class="label">&gt; Cargo bay</span>
+      <span class="dots"> ............... </span>
+      <span class="ok">[OK]</span>
+    </div>
+    <div class="s boot-line" style="top:226px; left:40px;">
+      <span class="label">&gt; Power systems</span>
+      <span class="dots"> ........... </span>
+      <span class="ok">[OK]</span>
+    </div>
+    <div class="s boot-line" style="top:258px; left:40px;">
+      <span class="label">&gt; Mission control</span>
+      <span class="dots"> ......... </span>
+      <span class="ok">[OK]</span>
+    </div>
+    <div class="s boot-line" style="top:290px; left:40px;">
+      <span class="label">&gt; Time sync</span>
+      <span class="dots"> .............. </span>
+      <span class="ok">[OK]</span>
+    </div>
+    <div class="s boot-line nominal" style="top:340px; left:0; right:0; text-align:center; width:100%;">
+      &gt; All systems nominal. Launch ready.
+    </div>
+
+    <div class="s boot-footer" style="bottom:20px; left:0; right:0; text-align:center; width:100%;">
+      April 25, 2026 · Kansas City
+    </div>
+  </div>
+</div>
+
+<!-- ==================== BOOT SCREEN (with failure) ==================== -->
+<div class="mockup">
+  <label>2 · Boot Sequence (partial failure)</label>
+  <div class="screen">
+    <div class="star" style="left:45px;top:30px"></div>
+    <div class="star dim" style="left:120px;top:65px"></div>
+    <div class="star mid" style="left:520px;top:22px"></div>
+    <div class="star" style="left:380px;top:80px"></div>
+    <div class="star dim" style="left:590px;top:55px"></div>
+    <div class="star mid" style="left:200px;top:15px"></div>
+
+    <div class="s boot-title" style="top:24px; left:0; right:0; text-align:center; width:100%;">BSidesKC</div>
+    <div class="s boot-year" style="top:64px; left:0; right:0; text-align:center; width:100%;">2 0 2 6</div>
+
+    <div class="s boot-line" style="top:130px; left:40px;">
+      <span class="label">&gt; Comms link</span>
+      <span class="dots"> .............. </span>
+      <span class="fail">[FAIL]</span>
+    </div>
+    <div class="s boot-line" style="top:162px; left:40px;">
+      <span class="label">&gt; Navigation</span>
+      <span class="dots"> .............. </span>
+      <span class="fail">[SKIP]</span>
+    </div>
+    <div class="s boot-line" style="top:194px; left:40px;">
+      <span class="label">&gt; Cargo bay</span>
+      <span class="dots"> ............... </span>
+      <span class="fail">[FAIL]</span>
+    </div>
+    <div class="s boot-line" style="top:226px; left:40px;">
+      <span class="label">&gt; Power systems</span>
+      <span class="dots"> ........... </span>
+      <span class="ok">[OK]</span>
+    </div>
+    <div class="s boot-line" style="top:258px; left:40px;">
+      <span class="label">&gt; Mission control</span>
+      <span class="dots"> ......... </span>
+      <span class="fail">[FAIL]</span>
+    </div>
+    <div class="s boot-line" style="top:290px; left:40px;">
+      <span class="label">&gt; Time sync</span>
+      <span class="dots"> .............. </span>
+      <span class="fail">[SKIP]</span>
+    </div>
+    <div class="s boot-line" style="top:340px; left:0; right:0; text-align:center; width:100%; color: #f57f17;">
+      &gt; Partial systems. Offline mode.
+    </div>
+
+    <div class="s boot-footer" style="bottom:20px; left:0; right:0; text-align:center; width:100%;">
+      April 25, 2026 · Kansas City
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MAIN MENU ==================== -->
+<div class="mockup">
+  <label>3 · Main Menu</label>
+  <div class="screen">
+    <div class="header-bar">
+      <span class="brand">BSidesKC '26</span>
+      <span class="batt">🔋 87%</span>
+    </div>
+
+    <!-- Featured buttons -->
+    <div class="s btn-featured lander" style="top:70px; left:24px; width:286px; height:90px; border-radius:16px;">
+      🚀 LANDER
+    </div>
+    <div class="s btn-featured schedule" style="top:70px; right:24px; left: 330px; width:286px; height:90px; border-radius:16px;">
+      📅 SCHEDULE
+    </div>
+
+    <!-- Secondary row 1 -->
+    <div class="s btn-secondary s1" style="top:180px; left:24px; width:190px; height:70px;">Check-In</div>
+    <div class="s btn-secondary s2" style="top:180px; left:225px; width:190px; height:70px;">Bling</div>
+    <div class="s btn-secondary s3" style="top:180px; left:426px; width:190px; height:70px;">WiFi</div>
+
+    <!-- Secondary row 2 -->
+    <div class="s btn-secondary s4" style="top:264px; left:24px; width:190px; height:70px;">Credits</div>
+    <div class="s btn-secondary s5" style="top:264px; left:225px; width:190px; height:70px;">CTF</div>
+    <div class="s btn-secondary s6" style="top:264px; left:426px; width:190px; height:70px;">⚙</div>
+
+    <!-- Subtle version -->
+    <div class="s" style="bottom:8px; right:16px; font-size:11px; color:#333;">v1.1.1</div>
+  </div>
+</div>
+
+<!-- ==================== MAIN MENU (no battery) ==================== -->
+<div class="mockup">
+  <label>4 · Main Menu (no battery sensor)</label>
+  <div class="screen">
+    <div class="header-bar">
+      <span class="brand">BSidesKC '26</span>
+      <span class="batt" style="color:#555;">⚡ USB</span>
+    </div>
+
+    <div class="s btn-featured lander" style="top:70px; left:24px; width:286px; height:90px; border-radius:16px;">
+      🚀 LANDER
+    </div>
+    <div class="s btn-featured schedule" style="top:70px; right:24px; left: 330px; width:286px; height:90px; border-radius:16px;">
+      📅 SCHEDULE
+    </div>
+
+    <div class="s btn-secondary s1" style="top:180px; left:24px; width:190px; height:70px;">Check-In</div>
+    <div class="s btn-secondary s2" style="top:180px; left:225px; width:190px; height:70px;">Bling</div>
+    <div class="s btn-secondary s3" style="top:180px; left:426px; width:190px; height:70px;">WiFi</div>
+
+    <div class="s btn-secondary s4" style="top:264px; left:24px; width:190px; height:70px;">Credits</div>
+    <div class="s btn-secondary s5" style="top:264px; left:225px; width:190px; height:70px;">CTF</div>
+    <div class="s btn-secondary s6" style="top:264px; left:426px; width:190px; height:70px;">⚙</div>
+
+    <div class="s" style="bottom:8px; right:16px; font-size:11px; color:#333;">v1.1.1</div>
+  </div>
+</div>
+
+<!-- ==================== SYSTEM SUB-MENU ==================== -->
+<div class="mockup">
+  <label>5 · System Sub-Menu (⚙ tap)</label>
+  <div class="screen">
+    <div class="header-bar">
+      <span class="brand" style="font-size:17px;">⚙ System</span>
+      <span class="batt">🔋 87%</span>
+    </div>
+
+    <div style="position:absolute; top:54px; left:0; right:0; bottom:60px;">
+      <div class="sys-item">RGBs <span class="arrow">›</span></div>
+      <div class="sys-item">LEDs <span class="arrow">›</span></div>
+      <div class="sys-item">Buzzer <span class="arrow">›</span></div>
+      <div class="sys-item">SD Card <span class="arrow">›</span></div>
+      <div class="sys-item">Battery <span class="arrow">›</span></div>
+      <div class="sys-item">OTA Update <span class="arrow">›</span></div>
+      <div class="sys-item">System Info <span class="arrow">›</span></div>
+    </div>
+
+    <div class="s btn-game back" style="bottom:16px; left:50%; transform:translateX(-50%); width:160px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+      ← BACK
+    </div>
+  </div>
+</div>
+
+<!-- ==================== GAME: MODE SELECT ==================== -->
+<div class="mockup">
+  <label>6 · Game: Mode Select</label>
+  <div class="screen">
+    <div class="star" style="left:45px;top:30px"></div>
+    <div class="star dim" style="left:520px;top:22px"></div>
+    <div class="star mid" style="left:200px;top:55px"></div>
+    <div class="star" style="left:580px;top:70px"></div>
+
+    <div class="s game-title" style="top:20px; left:0; right:0; text-align:center; width:100%;">LUNAR LANDER</div>
+
+    <div class="s btn-game play" style="top:80px; left:50%; transform:translateX(-50%); width:260px; height:64px; border-radius:14px; display:flex; align-items:center; justify-content:center;">
+      PLAY
+    </div>
+    <div class="s btn-game spectate" style="top:160px; left:50%; transform:translateX(-50%); width:260px; height:56px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:16px;">
+      SPECTATE
+    </div>
+    <div class="s btn-game multi" style="top:230px; left:50%; transform:translateX(-50%); width:260px; height:56px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:16px;">
+      MULTIPLAYER
+    </div>
+
+    <div class="s btn-game back" style="top:320px; left:50%; transform:translateX(-50%); width:160px; height:48px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+      ← BACK
+    </div>
+  </div>
+</div>
+
+<!-- ==================== GAME: MODE SELECT (no wifi) ==================== -->
+<div class="mockup">
+  <label>7 · Game: Mode Select (no WiFi)</label>
+  <div class="screen">
+    <div class="star" style="left:45px;top:30px"></div>
+    <div class="star dim" style="left:520px;top:22px"></div>
+    <div class="star mid" style="left:200px;top:55px"></div>
+
+    <div class="s game-title" style="top:20px; left:0; right:0; text-align:center; width:100%;">LUNAR LANDER</div>
+
+    <div class="s btn-game play" style="top:80px; left:50%; transform:translateX(-50%); width:260px; height:64px; border-radius:14px; display:flex; align-items:center; justify-content:center;">
+      PLAY
+    </div>
+    <div class="s btn-game disabled" style="top:160px; left:50%; transform:translateX(-50%); width:260px; height:56px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:16px;">
+      SPECTATE
+    </div>
+    <div class="s btn-game disabled" style="top:230px; left:50%; transform:translateX(-50%); width:260px; height:56px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:16px;">
+      MULTIPLAYER
+    </div>
+
+    <div class="s btn-game back" style="top:320px; left:50%; transform:translateX(-50%); width:160px; height:48px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+      ← BACK
+    </div>
+  </div>
+</div>
+
+<!-- ==================== GAME: DIFFICULTY SELECT ==================== -->
+<div class="mockup">
+  <label>8 · Game: Difficulty Select (online)</label>
+  <div class="screen">
+    <div class="star" style="left:100px;top:20px"></div>
+    <div class="star dim" style="left:450px;top:40px"></div>
+    <div class="star mid" style="left:560px;top:15px"></div>
+
+    <div class="s" style="top:20px; left:0; right:0; text-align:center; width:100%; color:#888; font-size:16px; letter-spacing:2px;">SELECT DIFFICULTY</div>
+
+    <div class="s btn-game easy" style="top:70px; left:50%; transform:translateX(-50%); width:240px; height:64px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+      EASY
+    </div>
+    <div class="s btn-game medium" style="top:150px; left:50%; transform:translateX(-50%); width:240px; height:64px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+      MEDIUM
+    </div>
+    <div class="s btn-game hard" style="top:230px; left:50%; transform:translateX(-50%); width:240px; height:64px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+      HARD
+    </div>
+
+    <div class="s mode-toggle online" style="top:320px; left:0; right:0; text-align:center; width:100%;">
+      ● Playing Online
+    </div>
+
+    <div class="s btn-game back" style="top:360px; left:50%; transform:translateX(-50%); width:160px; height:48px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+      ← BACK
+    </div>
+  </div>
+</div>
+
+<!-- ==================== GAME: DIFFICULTY SELECT (offline) ==================== -->
+<div class="mockup">
+  <label>9 · Game: Difficulty Select (offline)</label>
+  <div class="screen">
+    <div class="star" style="left:100px;top:20px"></div>
+    <div class="star dim" style="left:450px;top:40px"></div>
+
+    <div class="s" style="top:20px; left:0; right:0; text-align:center; width:100%; color:#888; font-size:16px; letter-spacing:2px;">SELECT DIFFICULTY</div>
+
+    <div class="s btn-game easy" style="top:70px; left:50%; transform:translateX(-50%); width:240px; height:64px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+      EASY
+    </div>
+    <div class="s btn-game medium" style="top:150px; left:50%; transform:translateX(-50%); width:240px; height:64px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+      MEDIUM
+    </div>
+    <div class="s btn-game hard" style="top:230px; left:50%; transform:translateX(-50%); width:240px; height:64px; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+      HARD
+    </div>
+
+    <div class="s mode-toggle offline" style="top:320px; left:0; right:0; text-align:center; width:100%;">
+      ○ Playing Offline
+    </div>
+
+    <div class="s btn-game back" style="top:360px; left:50%; transform:translateX(-50%); width:160px; height:48px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+      ← BACK
+    </div>
+  </div>
+</div>
+
+<!-- ==================== CREDITS ==================== -->
+<div class="mockup">
+  <label>10 · Credits</label>
+  <div class="screen">
+    <div class="star" style="left:45px;top:30px"></div>
+    <div class="star dim" style="left:520px;top:22px"></div>
+    <div class="star mid" style="left:300px;top:15px"></div>
+    <div class="star" style="left:580px;top:60px"></div>
+    <div class="star dim" style="left:100px;top:70px"></div>
+
+    <div style="position:absolute; top:30px; left:0; right:0; text-align:center;">
+      <div class="credits-line title">BSidesKC</div>
+      <div class="credits-line subtitle" style="letter-spacing:6px; font-size:18px; color:#00e5ff;">2 0 2 6</div>
+      <div class="credits-line subtitle">April 25 · Kansas City</div>
+      <div style="height:24px;"></div>
+      <div class="credits-line heading">Badge Hardware</div>
+      <div class="credits-line detail">BadgePirates · bplabs.tech</div>
+      <div style="height:12px;"></div>
+      <div class="credits-line heading">Lunar Lander Game</div>
+      <div class="credits-line detail">Ad Astra Protocol</div>
+      <div style="height:12px;"></div>
+      <div class="credits-line heading">Powered by</div>
+      <div class="credits-line detail">LVGL · ESP32-S3</div>
+      <div style="height:20px;"></div>
+      <div class="credits-line hashtag">#BadgeLife</div>
+    </div>
+
+    <div class="s btn-game back" style="bottom:16px; left:50%; transform:translateX(-50%); width:160px; height:48px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+      ← BACK
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

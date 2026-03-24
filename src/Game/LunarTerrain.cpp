@@ -92,7 +92,7 @@ bool terrain_check_collision(const Terrain &t, Lander &l) {
         l.vy < LN_MAX_LANDING_SPEED &&
         fabsf(l.rotation) < LN_MAX_LANDING_ANGLE) {
         l.landed = true;
-        l.y = ground - 10;  // offset so triangle base sits on terrain
+        l.y = ground;  // legs at y=0 in local coords touch terrain
         l.vx = 0;
         l.vy = 0;
     } else {

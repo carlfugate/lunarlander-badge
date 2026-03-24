@@ -17,11 +17,12 @@ extern lv_obj_t * password_textarea;
 extern String selected_ssid;
 
 void create_main_menu(bool show_ota_check = true);
+void load_screen_and_delete_old(lv_obj_t *new_scr);
 extern lv_obj_t * main_menu;
 // Declare other global variables if needed
 
 // Function prototypes for creating windows/menus
-void create_back_button(lv_obj_t * parent);
+void create_back_button(lv_obj_t * parent, lv_event_cb_t back_cb = nullptr);
 void create_battery_window();
 void create_buzzer_window();
 void create_neo_window();
