@@ -92,6 +92,7 @@ static lv_timer_t *mp_timer = NULL;
 static lv_obj_t *game_screen = NULL;
 static bool was_thrusting = false;
 static bool mp_was_thrusting = false;
+static int solo_last_rotate = 0;
 static int mp_last_rotate = 0;
 
 static void game_tick_cb(lv_timer_t *t);
@@ -355,8 +356,6 @@ static void diff_btn_cb(lv_event_t *e) {
     gs.mode = pending_mode;
     start_game(diff);
 }
-
-static int solo_last_rotate = 0;
 
 static void start_game(uint8_t difficulty) {
     lv_obj_clean(game_screen);

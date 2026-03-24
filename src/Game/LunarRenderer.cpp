@@ -139,7 +139,7 @@ static void fill_terrain(const Terrain &t) {
             if (y < 0) y = 0;
             if (y >= LN_SCREEN_H) continue;
             for (int16_t row = y; row < LN_SCREEN_H; row++) {
-                lv_canvas_set_px_color(canvas, x, row, fill);
+                lv_canvas_set_px(canvas, x, row, fill, LV_OPA_COVER);
             }
         }
     }
@@ -281,11 +281,11 @@ static void draw_lander(const Lander &l) {
     int16_t cdy = world_to_screen_y(l.y - 15, cam);
     lv_color_t bright = l.crashed ? lv_color_make(255, 0, 0) : lv_color_make(255, 255, 255);
     if (cdx >= 1 && cdx < LN_SCREEN_W - 1 && cdy >= 1 && cdy < LN_SCREEN_H - 1) {
-        lv_canvas_set_px_color(canvas, cdx, cdy, bright);
-        lv_canvas_set_px_color(canvas, cdx-1, cdy, bright);
-        lv_canvas_set_px_color(canvas, cdx+1, cdy, bright);
-        lv_canvas_set_px_color(canvas, cdx, cdy-1, bright);
-        lv_canvas_set_px_color(canvas, cdx, cdy+1, bright);
+        lv_canvas_set_px(canvas, cdx, cdy, bright, LV_OPA_COVER);
+        lv_canvas_set_px(canvas, cdx-1, cdy, bright, LV_OPA_COVER);
+        lv_canvas_set_px(canvas, cdx+1, cdy, bright, LV_OPA_COVER);
+        lv_canvas_set_px(canvas, cdx, cdy-1, bright, LV_OPA_COVER);
+        lv_canvas_set_px(canvas, cdx, cdy+1, bright, LV_OPA_COVER);
     }
 }
 
