@@ -245,9 +245,15 @@ static void game_tick_cb(lv_timer_t *t) {
         return;
     }
 
-    // Online solo: wait for server init
+    // Online solo: wait for server init (5s timeout)
     if (gs.mode == MODE_ONLINE_SOLO && gs.phase == PHASE_WAITING) {
-        net_poll(gs); // sets PHASE_PLAYING on "init" message
+        net_poll(gs);
+        if (gs.phase == PHASE_PLAYING) { renderer_draw(gs); return; }
+        if (millis() - gs.start_ms > 5000) {
+            net_disconnect();
+            gs.mode = MODE_OFFLINE;
+            game_init(gs, gs.difficulty, (uint32_t)millis());
+        }
         renderer_draw(gs);
         return;
     }
@@ -366,6 +372,7 @@ static void start_game(uint8_t difficulty) {
             game_init(gs, difficulty, (uint32_t)millis());
             gs.mode = MODE_ONLINE_SOLO;
             gs.phase = PHASE_WAITING;
+            gs.start_ms = millis();
         } else {
             gs.mode = MODE_OFFLINE;
             game_init(gs, difficulty, (uint32_t)millis());
