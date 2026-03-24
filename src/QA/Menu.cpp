@@ -411,17 +411,17 @@ void create_credits_window(){
     lv_obj_t *t1 = lv_label_create(scr);
     lv_label_set_text(t1, "BSidesKC");
     lv_obj_set_style_text_color(t1, lv_color_hex(0x00e5ff), 0);
-    lv_obj_align(t1, LV_ALIGN_TOP_MID, 0, 15);
+    lv_obj_align(t1, LV_ALIGN_TOP_MID, 0, 8);
 
     lv_obj_t *t2 = lv_label_create(scr);
     lv_label_set_text(t2, "2 0 2 6");
     lv_obj_set_style_text_color(t2, lv_color_hex(0x00e5ff), 0);
-    lv_obj_align(t2, LV_ALIGN_TOP_MID, 0, 35);
+    lv_obj_align(t2, LV_ALIGN_TOP_MID, 0, 26);
 
     lv_obj_t *t3 = lv_label_create(scr);
     lv_label_set_text(t3, "April 25 - Kansas City");
     lv_obj_set_style_text_color(t3, lv_color_hex(0x888888), 0);
-    lv_obj_align(t3, LV_ALIGN_TOP_MID, 0, 55);
+    lv_obj_align(t3, LV_ALIGN_TOP_MID, 0, 44);
 
     lv_obj_t *body = lv_label_create(scr);
     lv_label_set_text(body, "Badge Hardware\nBadgePirates - bplabs.tech\n\n"
@@ -429,12 +429,12 @@ void create_credits_window(){
                             "Powered by\nLVGL - ESP32-S3");
     lv_obj_set_style_text_color(body, lv_color_hex(0x00c853), 0);
     lv_obj_set_style_text_align(body, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_align(body, LV_ALIGN_CENTER, 0, 10);
+    lv_obj_align(body, LV_ALIGN_TOP_MID, 0, 62);
 
     lv_obj_t *tag = lv_label_create(scr);
     lv_label_set_text(tag, "#BadgeLife");
     lv_obj_set_style_text_color(tag, lv_color_hex(0x00e5ff), 0);
-    lv_obj_align(tag, LV_ALIGN_BOTTOM_MID, 0, -40);
+    lv_obj_align(tag, LV_ALIGN_BOTTOM_MID, 0, -38);
 
     lv_obj_t *back = lv_btn_create(scr);
     lv_obj_set_size(back, 80, 28);
