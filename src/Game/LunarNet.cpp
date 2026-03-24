@@ -75,6 +75,15 @@ void net_send_input(const char *action) {
     send_json(doc);
 }
 
+void net_send_start(uint8_t difficulty) {
+    const char* diff_str[] = {"simple", "medium", "hard"};
+    JsonDocument doc;
+    doc["type"] = "start";
+    doc["difficulty"] = diff_str[difficulty < 3 ? difficulty : 0];
+    doc["player_name"] = "Badge";
+    send_json(doc);
+}
+
 void net_create_room(const char *player_name, uint8_t difficulty) {
     JsonDocument doc;
     doc["type"] = "create_room";

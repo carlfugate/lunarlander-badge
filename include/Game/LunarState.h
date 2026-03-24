@@ -15,6 +15,7 @@ enum GameMode {
 
 enum GamePhase {
     PHASE_MENU,
+    PHASE_WAITING,
     PHASE_PLAYING,
     PHASE_LANDED,
     PHASE_CRASHED

@@ -239,11 +239,32 @@ static void game_tick_cb(lv_timer_t *t) {
     InputState inp = input_read();
 
     if (inp.back) {
+        if (gs.mode == MODE_ONLINE_SOLO) net_disconnect();
         lunar_lander_stop();
         return;
     }
 
-    game_tick(gs, inp.thrust, inp.rotate_dir, millis());
+    // Online solo: wait for server init
+    if (gs.mode == MODE_ONLINE_SOLO && gs.phase == PHASE_WAITING) {
+        net_poll(gs); // sets PHASE_PLAYING on "init" message
+        renderer_draw(gs);
+        return;
+    }
+
+    // Online solo: send inputs to server and poll for state
+    if (gs.mode == MODE_ONLINE_SOLO && gs.phase == PHASE_PLAYING) {
+        if (inp.thrust && !was_thrusting) net_send_input("thrust_on");
+        if (!inp.thrust && was_thrusting) net_send_input("thrust_off");
+        if (inp.rotate_dir != solo_last_rotate) {
+            if (inp.rotate_dir == -1) net_send_input("rotate_left");
+            else if (inp.rotate_dir == 1) net_send_input("rotate_right");
+            else net_send_input("rotate_stop");
+        }
+        solo_last_rotate = inp.rotate_dir;
+        net_poll(gs);
+    } else {
+        game_tick(gs, inp.thrust, inp.rotate_dir, millis());
+    }
 
     if (gs.lander.thrusting && !was_thrusting) audio_thrust_start();
     if (!gs.lander.thrusting && was_thrusting) audio_thrust_stop();
@@ -268,6 +289,7 @@ static void game_tick_cb(lv_timer_t *t) {
         audio_thrust_stop();
         audio_landed();
         leds_landed();
+        if (gs.mode == MODE_ONLINE_SOLO) net_disconnect();
         show_game_over();
     } else if (gs.phase == PHASE_CRASHED) {
         lv_timer_del(game_timer);
@@ -275,6 +297,7 @@ static void game_tick_cb(lv_timer_t *t) {
         audio_thrust_stop();
         audio_crashed();
         leds_crashed();
+        if (gs.mode == MODE_ONLINE_SOLO) net_disconnect();
         show_game_over();
     }
 }
@@ -333,13 +356,28 @@ static void diff_btn_cb(lv_event_t *e) {
     start_game(diff);
 }
 
+static int solo_last_rotate = 0;
+
 static void start_game(uint8_t difficulty) {
-    // TODO: MODE_ONLINE_SOLO — create server session, send inputs via WebSocket
     lv_obj_clean(game_screen);
-    game_init(gs, difficulty, (uint32_t)millis());
+    if (gs.mode == MODE_ONLINE_SOLO) {
+        net_init();
+        if (net_connect_player()) {
+            net_send_start(difficulty);
+            game_init(gs, difficulty, (uint32_t)millis());
+            gs.mode = MODE_ONLINE_SOLO;
+            gs.phase = PHASE_WAITING;
+        } else {
+            gs.mode = MODE_OFFLINE;
+            game_init(gs, difficulty, (uint32_t)millis());
+        }
+    } else {
+        game_init(gs, difficulty, (uint32_t)millis());
+    }
     input_init();
     renderer_init(game_screen);
     was_thrusting = false;
+    solo_last_rotate = 0;
     game_timer = lv_timer_create(game_tick_cb, 16, NULL);
 }
 
@@ -533,6 +571,7 @@ void lunar_lander_stop() {
     if (game_timer) {
         lv_timer_del(game_timer);
         game_timer = NULL;
+        if (gs.mode == MODE_ONLINE_SOLO) net_disconnect();
     }
     if (spectate_timer) {
         lv_timer_del(spectate_timer);

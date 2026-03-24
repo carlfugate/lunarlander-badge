@@ -20,6 +20,7 @@ void net_init();
 bool net_spectate(const char *session_id);
 bool net_connect_player();
 void net_send_input(const char *action);
+void net_send_start(uint8_t difficulty);
 void net_create_room(const char *player_name, uint8_t difficulty);
 void net_join_room(const char *room_id, const char *player_name);
 void net_start_game();
