@@ -50,9 +50,20 @@ include/Game/
     LunarAudio.h         # Buzzer + LEDs
     LunarNet.h           # WebSocket client (Phase 2+)
     LunarLobby.h         # Room browser UI (Phase 3)
+    LunarScoreboard.h    # Local high score storage
 
 src/Game/
     (matching .cpp files)
+
+sim/
+    sim_main.cpp         # SDL2 desktop simulator
+    Makefile             # Build with: make && make run
+
+include/
+    FeatureFlags.h       # Compile-time feature toggles
+
+mockups/
+    badge-mockups.html   # UI design mockups (2x scale)
 
 test/
     test_physics/test_physics.cpp
@@ -64,11 +75,9 @@ test/
 
 ---
 
-## Menu Integration (3 lines changed)
+## Menu Integration (Redesigned)
 
-1. `Menu.cpp` → `buttons[]`: add `"Lander"`
-2. `Menu.cpp` → `button_event_handler()`: add case for `"Lander"` → `lunar_lander_start()`
-3. `Includes.h`: add `#include "Game/LunarState.h"`
+The main menu was completely redesigned for BSidesKC 2026 with a dark theme, prioritized button layout, LVGL icons, system sub-menu, and back-button navigation. The original 3-line integration was replaced by a full UI overhaul across `Menu.cpp`, `Includes.h`, and new sub-menu screens.
 
 ---
 
@@ -144,17 +153,51 @@ This means the Phase 1 physics/terrain/collision/scoring code is the foundation 
 
 ---
 
+## Phase 4 — UI/UX Polish (DONE)
+
+| Feature | Status |
+|---------|--------|
+| BSidesKC 2026 themed boot screen | ✅ Done |
+| Dark theme main menu with prioritized layout | ✅ Done |
+| System sub-menu for QA tools | ✅ Done |
+| Dark theme on all sub-windows | ✅ Done |
+| Back button navigation (one level up) | ✅ Done |
+| Scrolling mission control ticker | ✅ Done |
+| LVGL icons on all buttons | ✅ Done |
+| Updated credits with BSidesKC branding | ✅ Done |
+| Feature flags (FF_SKIP_BOOT_CHECKS) | ✅ Done |
+| LVGL screen memory leak fix | ✅ Done |
+| Heap debug logging | ✅ Done |
+
+---
+
+## Game Improvements (DONE)
+
+| Feature | Status |
+|---------|--------|
+| Fixed-step physics accumulator (real-time on hardware) | ✅ Done |
+| Online/offline mode toggle on difficulty select | ✅ Done |
+| New touch controls (thrust left, rotate right) | ✅ Done |
+| Speed HUD with direction color (red=falling, green=rising) | ✅ Done |
+| Local scoreboard — top 5, persisted to SD | ✅ Done |
+| GameMode enum (offline, online solo, multiplayer, spectate) | ✅ Done |
+| Desktop SDL2 simulator | ✅ Done |
+
+---
+
 ## Touch Controls
 
 ```
-┌──────────────────────────────────┐
-│          THRUST ZONE             │  top half (y < 120): thrust
-├────────────┬─────────────────────┤
-│  ROTATE    │       ROTATE        │  bottom half:
-│   LEFT     │       RIGHT         │  x < 160 = left
-│ (x < 160)  │    (x >= 160)       │  x >= 160 = right
-└────────────┴─────────────────────┘
+┌──────────┬──────────┐
+│          │ Rotate   │
+│  THRUST  │  Left    │
+│  (left   ├──────────┤
+│   half)  │ Rotate   │
+│          │  Right   │
+└──────────┴──────────┘
 ```
+
+Left half (x < 160) = thrust. Top-right (x >= 160, y < 120) = rotate left. Bottom-right (x >= 160, y >= 120) = rotate right.
 
 Enter button (GPIO 38) = alt thrust. Back button (GPIO 39) = exit.
 
@@ -179,7 +222,7 @@ Enter button (GPIO 38) = alt thrust. Back button (GPIO 39) = exit.
 ## Memory Strategy
 
 Canvas buffer = 320×240×2 = 153KB → PSRAM via `heap_caps_malloc(MALLOC_CAP_SPIRAM)`.
-Fallback: 160×120 (~38KB) in LVGL heap if no PSRAM.
+Fallback: `malloc` if PSRAM unavailable.
 
 ---
 
@@ -207,8 +250,8 @@ Manual checklists per phase:
 
 ## Open Decisions
 
-1. **Canvas resolution** — Full 320×240 in PSRAM (recommended) vs 160×120. Verify PSRAM on badge.
-2. **Touch feel** — Zone layout may need tuning after hands-on testing.
-3. **High scores** — NVS (simple) or SD card (exportable). Defer to after Phase 1.
+1. ~~**Canvas resolution**~~ — RESOLVED: Full 320×240 in PSRAM, fallback to `malloc` if PSRAM unavailable.
+2. ~~**Touch feel**~~ — RESOLVED: Left/right split layout implemented (thrust left half, rotate right half).
+3. ~~**High scores**~~ — RESOLVED: SD card (`/lander_scores.dat`), top 5 scores.
 4. **Larger font** — Enable Montserrat 20/26 in lv_conf.h for score display (~5-10KB flash).
 5. **Server URL** — Configurable for local dev vs production. SD card config or hardcoded.
