@@ -80,6 +80,12 @@ static void bling_off() {
     clearNeoPixels();
 }
 
+void bling_stop_animation() {
+    bling_ticker.detach();
+    bling_mode = 0;
+    bling_off();
+}
+
 static void start_bling_animation(int mode) {
     bling_mode = mode;
     bling_ticker.detach();

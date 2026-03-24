@@ -82,6 +82,7 @@ uint16_t game_calc_score(const GameState &gs) {
 #include "Game/LunarNet.h"
 #include "Game/LunarScoreboard.h"
 #include "QA/Menu.h"
+#include "QA/Bling.hpp"
 
 static GameState gs;
 static Scoreboard scoreboard;
@@ -519,6 +520,7 @@ static void show_game_over() {
 }
 
 void lunar_lander_start() {
+    bling_stop_animation();
     game_screen = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(game_screen, lv_color_black(), 0);
     load_screen_and_delete_old(game_screen);
