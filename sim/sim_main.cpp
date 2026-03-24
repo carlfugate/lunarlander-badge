@@ -1,5 +1,6 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
+#include <algorithm>
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
@@ -73,6 +74,22 @@ static void draw(SDL_Renderer *r) {
         }
     }
 
+    // Terrain fill
+    SDL_SetRenderDrawColor(r, 20, 40, 20, 255);
+    for (uint16_t i = 0; i + 1 < gs.terrain.num_points; i++) {
+        int tx1 = zx(world_to_screen_x(gs.terrain.points[i][0], cam));
+        int ty1 = zx(world_to_screen_y(gs.terrain.points[i][1], cam));
+        int tx2 = zx(world_to_screen_x(gs.terrain.points[i + 1][0], cam));
+        int ty2 = zx(world_to_screen_y(gs.terrain.points[i + 1][1], cam));
+        if (tx1 > tx2) { std::swap(tx1, tx2); std::swap(ty1, ty2); }
+        for (int x = std::max(0, tx1); x <= std::min(SIM_W - 1, tx2); x++) {
+            int y = (tx2 == tx1) ? ty1 : ty1 + (ty2 - ty1) * (x - tx1) / (tx2 - tx1);
+            if (y < 0) y = 0;
+            if (y < SIM_H)
+                SDL_RenderDrawLine(r, x, y, x, SIM_H - 1);
+        }
+    }
+
     // Terrain
     for (uint16_t i = 0; i + 1 < gs.terrain.num_points; i++) {
         int16_t x1 = world_to_screen_x(gs.terrain.points[i][0], cam);
@@ -134,6 +151,16 @@ static void draw(SDL_Renderer *r) {
             SDL_SetRenderDrawColor(r, 255, 140, 0, 255);
             SDL_RenderDrawLine(r,fx1,fy1,ftx,fty); SDL_RenderDrawLine(r,fx2,fy2,ftx,fty);
         }
+
+        // Lander center dot for visibility
+        int cdx = zx(world_to_screen_x(l.x, cam));
+        int cdy = zx(world_to_screen_y(l.y - 15, cam));
+        SDL_SetRenderDrawColor(r, 255, 255, 255, 255);
+        SDL_RenderDrawPoint(r, cdx, cdy);
+        SDL_RenderDrawPoint(r, cdx-1, cdy);
+        SDL_RenderDrawPoint(r, cdx+1, cdy);
+        SDL_RenderDrawPoint(r, cdx, cdy-1);
+        SDL_RenderDrawPoint(r, cdx, cdy+1);
     }
 
     // HUD — fuel bar
