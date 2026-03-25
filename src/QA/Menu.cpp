@@ -10,6 +10,7 @@
 #include "Game/LunarAudio.h"
 #include "QA/Screensaver.h"
 #include "QA/Callsign.h"
+#include "QA/Reminder.h"
 
 void create_checkin_window();
 void create_credits_window();
@@ -742,6 +743,47 @@ static void build_ticker_text(char *buf, size_t buflen) {
 }
 
 //----------------------------------------------------
+// Badge Card Window (#40)
+//----------------------------------------------------
+void create_badge_card_window() {
+    lv_obj_t *scr = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
+    load_screen_and_delete_old(scr);
+
+    // Decorative border
+    lv_obj_t *border = lv_obj_create(scr);
+    lv_obj_set_size(border, 280, 180);
+    lv_obj_align(border, LV_ALIGN_CENTER, 0, -10);
+    lv_obj_set_style_bg_opa(border, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_color(border, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_border_width(border, 1, 0);
+    lv_obj_set_style_radius(border, 8, 0);
+    lv_obj_clear_flag(border, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Callsign in large font
+    lv_obj_t *name = lv_label_create(scr);
+    lv_label_set_text_fmt(name, "%s", callsign_get());
+    lv_obj_set_style_text_font(name, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(name, lv_color_hex(0x00e5ff), 0);
+    lv_obj_align(name, LV_ALIGN_TOP_MID, 0, 30);
+
+    // Badge ID (MAC address)
+    lv_obj_t *id = lv_label_create(scr);
+    lv_label_set_text_fmt(id, "Badge: %s", WiFi.macAddress().c_str());
+    lv_obj_set_style_text_color(id, lv_color_hex(0x888888), 0);
+    lv_obj_align(id, LV_ALIGN_TOP_MID, 0, 60);
+
+    // Conference branding
+    lv_obj_t *conf = lv_label_create(scr);
+    lv_label_set_text(conf, "BSidesKC 2026\nAd Astra");
+    lv_obj_set_style_text_color(conf, lv_color_hex(0x00c853), 0);
+    lv_obj_set_style_text_align(conf, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(conf, LV_ALIGN_CENTER, 0, 10);
+
+    create_back_button(scr);
+}
+
+//----------------------------------------------------
 // Display Main Menu Buttons
 //----------------------------------------------------
 void display_main_menu_buttons() {
@@ -798,6 +840,8 @@ void display_main_menu_buttons() {
         uint32_t m = (elapsed % 3600) / 60;
         uint32_t s = elapsed % 60;
 
+        reminder_check(elapsed);
+
         // Easter egg: 42 (4h 2m 0s = 14520s)
         static bool answer_shown = false;
         if (elapsed == 14520 && !answer_shown) {
@@ -814,7 +858,9 @@ void display_main_menu_buttons() {
             lv_label_set_text(met_label, LV_SYMBOL_AUDIO " PARTY");
         } else {
             if (answer_shown && elapsed > 14525) answer_shown = false;
-            lv_label_set_text_fmt(met_label, "MET %02lu:%02lu:%02lu", h, m, s);
+            lv_label_set_text_fmt(met_label, "MET %02lu:%02lu:%02lu %s",
+                h, m, s,
+                (WiFi.status() == WL_CONNECTED) ? LV_SYMBOL_WIFI : "");
         }
     }, 1000, NULL);
 
@@ -854,7 +900,7 @@ void display_main_menu_buttons() {
 
     // Secondary buttons: 3x2 grid
     struct { const char *label; lv_color_t bg; lv_color_t grad; lv_event_cb_t cb; } items[] = {
-        {LV_SYMBOL_OK " Check-In", lv_color_hex(0x4e54c8), lv_color_hex(0x8f94fb), [](lv_event_t *e) { create_checkin_window(); }},
+        {LV_SYMBOL_OK " My Card", lv_color_hex(0x4e54c8), lv_color_hex(0x8f94fb), [](lv_event_t *e) { create_badge_card_window(); }},
         {LV_SYMBOL_TINT " Bling",   lv_color_hex(0x614385), lv_color_hex(0x516395), [](lv_event_t *e) { create_bling_window(); }},
         {LV_SYMBOL_WIFI " WiFi",    lv_color_hex(0x11998e), lv_color_hex(0x38ef7d), [](lv_event_t *e) { create_wifi_window(); }},
         {LV_SYMBOL_FILE " Credits", lv_color_hex(0xf7971e), lv_color_hex(0xffe259), [](lv_event_t *e) { create_credits_window(); }},

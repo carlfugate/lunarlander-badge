@@ -47,6 +47,8 @@
 #define LN_MULT_MED          15
 #define LN_MULT_HARD         20
 
+enum LanderSkin { SKIN_DEFAULT = 0, SKIN_GOLD, SKIN_RED, SKIN_RAINBOW, SKIN_COUNT };
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
 #endif

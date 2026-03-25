@@ -9,6 +9,7 @@ void game_init(GameState &gs, uint8_t difficulty, uint32_t seed) {
     gs.last_tick_ms = 0;
     gs.accum_ms = 0;
     gs.score = 0;
+    gs.skin = SKIN_DEFAULT;
     lander_init(gs.lander);
     terrain_generate(gs.terrain, difficulty, seed);
 }

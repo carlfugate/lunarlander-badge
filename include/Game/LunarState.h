@@ -32,6 +32,7 @@ struct GameState {
     uint32_t accum_ms;     // physics time accumulator
     uint8_t difficulty;
     uint16_t score;
+    LanderSkin skin;
 };
 
 void game_init(GameState &gs, uint8_t difficulty, uint32_t seed);

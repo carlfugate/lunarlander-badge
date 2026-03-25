@@ -225,6 +225,24 @@ static void draw_touch_controls() {
     draw_line(canvas, brx + 6, bry, brx, bry + 4, dim);
 }
 
+static LanderSkin current_skin = SKIN_DEFAULT;
+
+static lv_color_t skin_color(LanderSkin skin, bool crashed) {
+    if (crashed) return lv_color_make(255, 0, 0);
+    switch (skin) {
+        case SKIN_GOLD: return lv_color_make(255, 200, 0);
+        case SKIN_RED: return lv_color_make(255, 60, 60);
+        case SKIN_RAINBOW: {
+            static uint8_t hue = 0;
+            hue += 5;
+            if (hue < 85) return lv_color_make(255 - hue*3, hue*3, 0);
+            if (hue < 170) return lv_color_make(0, 255-(hue-85)*3, (hue-85)*3);
+            return lv_color_make((hue-170)*3, 0, 255-(hue-170)*3);
+        }
+        default: return lv_color_white();
+    }
+}
+
 // Rotate local point by lander rotation, translate to world, project to screen
 static void lander_pt(const Lander &l, float lx, float ly, float s, float c, int16_t &sx, int16_t &sy) {
     float wx = l.x + lx * c - ly * s;
@@ -236,7 +254,7 @@ static void lander_pt(const Lander &l, float lx, float ly, float s, float c, int
 static void draw_lander(const Lander &l) {
     float s = sinf(l.rotation);
     float c = cosf(l.rotation);
-    lv_color_t col = l.crashed ? lv_color_make(255, 0, 0) : lv_color_white();
+    lv_color_t col = skin_color(current_skin, l.crashed);
     lv_color_t col2 = l.crashed ? lv_color_make(255, 0, 0) : lv_color_make(180, 180, 180);
 
     // Lunar module shape (matching web version, in world coords)
@@ -372,6 +390,7 @@ void renderer_draw(const GameState &gs) {
     fill_terrain(gs.terrain);
     draw_terrain(gs.terrain);
     draw_touch_controls();
+    current_skin = gs.skin;
     draw_lander(gs.lander);
     update_hud(gs);
 
