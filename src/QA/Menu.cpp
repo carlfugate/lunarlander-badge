@@ -923,6 +923,18 @@ void create_main_menu(bool show_ota_check) {
                 lv_obj_clean(main_menu);
                 display_main_menu_buttons();
                 screensaver_start_timer();
+                // Heartbeat LED - double-pulse on LED 0
+                static lv_timer_t *hb_timer = NULL;
+                if (hb_timer) lv_timer_del(hb_timer);
+                hb_timer = lv_timer_create([](lv_timer_t *t) {
+                    static uint8_t hb_phase = 0;
+                    hb_phase = (hb_phase + 1) % 20;
+                    uint8_t brightness = 0;
+                    if (hb_phase == 0 || hb_phase == 3) brightness = 30;
+                    if (hb_phase == 1 || hb_phase == 4) brightness = 15;
+                    setNeoPixelColor(0, Adafruit_NeoPixel::Color(0, brightness, brightness));
+                    for (int i = 1; i < NUM_NEOPIXELS; i++) setNeoPixelColor(i, 0);
+                }, 100, NULL);
             }, LV_EVENT_CLICKED, NULL);
             lv_obj_t *sl = lv_label_create(skip);
             lv_label_set_text(sl, "Skip");
@@ -937,6 +949,18 @@ void create_main_menu(bool show_ota_check) {
     }
     display_main_menu_buttons();
     screensaver_start_timer();
+    // Heartbeat LED - double-pulse on LED 0
+    static lv_timer_t *hb_timer = NULL;
+    if (hb_timer) lv_timer_del(hb_timer);
+    hb_timer = lv_timer_create([](lv_timer_t *t) {
+        static uint8_t hb_phase = 0;
+        hb_phase = (hb_phase + 1) % 20;
+        uint8_t brightness = 0;
+        if (hb_phase == 0 || hb_phase == 3) brightness = 30;
+        if (hb_phase == 1 || hb_phase == 4) brightness = 15;
+        setNeoPixelColor(0, Adafruit_NeoPixel::Color(0, brightness, brightness));
+        for (int i = 1; i < NUM_NEOPIXELS; i++) setNeoPixelColor(i, 0);
+    }, 100, NULL);
 }
 
 //----------------------------------------------------

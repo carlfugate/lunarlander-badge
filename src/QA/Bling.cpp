@@ -12,7 +12,7 @@ extern lv_obj_t* create_basic_window();
 static lv_obj_t* BlingWindow = nullptr;
 
 static Ticker bling_ticker;
-static int bling_mode = 0; // 0=none, 1=rainbow, 2=police, 3=all blink, 4=chase, 5=random
+static int bling_mode = 0; // 0=none, 1=rainbow, 2=police, 3=all blink, 4=chase, 5=random, 6=breathe, 7=aurora
 
 static void bling_animate();
 
@@ -76,6 +76,26 @@ static void bling_random() {
     }
 }
 
+// Ambient breathing - slow dim blue pulse
+static void bling_breathing() {
+    static uint8_t phase = 0;
+    phase += 2;
+    uint8_t val = phase < 128 ? phase / 4 : (255 - phase) / 4;
+    uint32_t c = Adafruit_NeoPixel::Color(0, 0, val);
+    for (int i = 0; i < NUM_NEOPIXELS; i++) setNeoPixelColor(i, c);
+}
+
+// Aurora - slow HSV wave across LEDs
+static void bling_aurora() {
+    static uint16_t hue_offset = 0;
+    hue_offset += 256;
+    for (int i = 0; i < NUM_NEOPIXELS; i++) {
+        uint16_t hue = hue_offset + i * 8000;
+        uint16_t mapped = 21845 + (hue % 21845);
+        setNeoPixelColor(i, Adafruit_NeoPixel::ColorHSV(mapped, 255, 25));
+    }
+}
+
 static void bling_off() {
     clearNeoPixels();
 }
@@ -103,6 +123,8 @@ static void bling_animate() {
         case 3: bling_all_blink(); break;
         case 4: bling_chase(); break;
         case 5: bling_random(); break;
+        case 6: bling_breathing(); break;
+        case 7: bling_aurora(); break;
         default: bling_off(); break;
     }
 }
@@ -116,6 +138,8 @@ static void bling_button_event_cb(lv_event_t* e) {
     else if (strcmp(label, "All Blink") == 0) start_bling_animation(3);
     else if (strcmp(label, "Chase") == 0) start_bling_animation(4);
     else if (strcmp(label, "Random") == 0) start_bling_animation(5);
+    else if (strcmp(label, "Breathe") == 0) start_bling_animation(6);
+    else if (strcmp(label, "Aurora") == 0) start_bling_animation(7);
     else if (strcmp(label, "Off") == 0) start_bling_animation(0);
 }
 
@@ -131,7 +155,7 @@ void create_bling_window() {
     bling_mode = 0;
 
     // Add Bling buttons (restored from previous working version)
-    const char* bling_modes[] = {"Rainbow", "Police", "All Blink", "Chase", "Random", "Off"};
+    const char* bling_modes[] = {"Rainbow", "Police", "All Blink", "Chase", "Random", "Breathe", "Aurora", "Off"};
     int num_modes = sizeof(bling_modes)/sizeof(bling_modes[0]);
     for (int i = 0; i < num_modes; ++i) {
         lv_obj_t* btn = lv_btn_create(BlingWindow);
