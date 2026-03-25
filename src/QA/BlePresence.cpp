@@ -52,6 +52,9 @@ static bool s_scanning = false;
 
 extern uint32_t badge_boot_ms;
 
+static volatile bool s_new_discovery_pulse = false;
+static volatile bool s_msg_received_pulse = false;
+
 static void start_advertising() {
     BLEAdvertising *pAdv = BLEDevice::getAdvertising();
     pAdv->stop();
@@ -120,9 +123,8 @@ static void process_result(BLEAdvertisedDevice &dev) {
         s_crew[idx].last_msg_id = 0;
         s_crew[idx].last_msg_ms = 0;
 
-        // Proximity greeting — cyan pulse
-        for (int i = 0; i < NUM_NEOPIXELS; i++)
-            setNeoPixelColor(i, Adafruit_NeoPixel::Color(0, 60, 80));
+        // Defer LED pulse to main task via scan_tick
+        s_new_discovery_pulse = true;
     }
 
     // Parse message_id (byte 14)
@@ -135,9 +137,8 @@ static void process_result(BLEAdvertisedDevice &dev) {
                 snprintf(s_last_notification, sizeof(s_last_notification),
                     "%s: %s", callsign, preset_messages[msg_id]);
                 s_has_notification = true;
-                // Purple pulse for incoming message
-                for (int i = 0; i < NUM_NEOPIXELS; i++)
-                    setNeoPixelColor(i, Adafruit_NeoPixel::Color(60, 0, 80));
+                // Defer LED pulse to main task via scan_tick
+                s_msg_received_pulse = true;
             }
         }
     }
@@ -158,6 +159,18 @@ static void on_scan_complete(BLEScanResults results) {
 
 static void scan_tick(lv_timer_t *t) {
     if (!pScan || s_scanning) return;
+
+    // Handle deferred LED pulses from BLE callback (main task safe)
+    if (s_new_discovery_pulse) {
+        s_new_discovery_pulse = false;
+        for (int i = 0; i < NUM_NEOPIXELS; i++)
+            setNeoPixelColor(i, Adafruit_NeoPixel::Color(0, 60, 80));
+    }
+    if (s_msg_received_pulse) {
+        s_msg_received_pulse = false;
+        for (int i = 0; i < NUM_NEOPIXELS; i++)
+            setNeoPixelColor(i, Adafruit_NeoPixel::Color(60, 0, 80));
+    }
 
     // Clear message after 5 seconds
     if (s_msg_id != 0 && millis() - s_msg_send_ms > 5000) {
