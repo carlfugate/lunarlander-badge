@@ -839,7 +839,7 @@ void display_main_menu_buttons() {
     static lv_timer_t *met_timer = NULL;
     if (met_timer) lv_timer_del(met_timer);
     met_timer = lv_timer_create([](lv_timer_t *t) {
-        if (!met_label) return;
+        if (lv_scr_act() != main_menu) return; // screen changed, skip
         uint32_t elapsed = (millis() - badge_boot_ms) / 1000;
         uint32_t h = elapsed / 3600;
         uint32_t m = (elapsed % 3600) / 60;
@@ -1100,6 +1100,7 @@ void create_main_menu(bool show_ota_check) {
                 static lv_timer_t *hb_timer = NULL;
                 if (hb_timer) lv_timer_del(hb_timer);
                 hb_timer = lv_timer_create([](lv_timer_t *t) {
+        if (lv_scr_act() != main_menu) return;
                     static uint8_t hb_phase = 0;
                     hb_phase = (hb_phase + 1) % 20;
                     uint8_t brightness = 0;
@@ -1126,6 +1127,7 @@ void create_main_menu(bool show_ota_check) {
     static lv_timer_t *hb_timer = NULL;
     if (hb_timer) lv_timer_del(hb_timer);
     hb_timer = lv_timer_create([](lv_timer_t *t) {
+        if (lv_scr_act() != main_menu) return;
         static uint8_t hb_phase = 0;
         hb_phase = (hb_phase + 1) % 20;
         uint8_t brightness = 0;
