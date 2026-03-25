@@ -28,6 +28,7 @@ This project uses a supervisor/subagent pattern for all AI-assisted development.
 3. **Keep context small.** Each subagent call should be a focused task with clear inputs and expected outputs. Don't dump the entire project history.
 4. **Provide relevant context.** Tell the subagent what files to read, what patterns to follow, and what the acceptance criteria are.
 5. **Verify before moving on.** After a subagent completes work, confirm the output meets the issue's acceptance criteria before closing.
+6. **No blocking calls.** NEVER use `delay()`, blocking loops, or synchronous waits in LVGL timer callbacks, event handlers, or the main loop. This is a real-time system — blocking causes crashes and watchdog resets. Use non-blocking patterns: `tone(pin,freq,dur)` (3-arg), single-shot LED sets, LVGL timers for sequences, non-blocking network polls. Always flag this requirement when delegating to subagents.
 
 ### Task Flow
 
