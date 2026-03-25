@@ -319,6 +319,22 @@ class SoakTest:
         self.cmd('nav.main')
         self.cmd('bling.off')
 
+    def test_screensaver_soak(self):
+        """Trigger screensaver in each mode, let it run, then wake."""
+        self.log('TEST', 'Screensaver soak: all modes')
+        for mode in SS_MODES:
+            self.cmd(f'screensaver.mode {mode}')
+            self.cmd('nav.main')  # ensure we're on main for idle timer
+            self.log('TEST', f'Screensaver mode {mode}: idling 90s...')
+            heap_before = self.badge.get_heap()
+            self.cmd('test.idle 90000', timeout=100)  # 90s triggers screensaver + 30s of scene
+            self.cmd('nav.main')  # wake
+            heap_after = self.badge.get_heap()
+            if heap_before and heap_after:
+                delta = heap_after[0] - heap_before[0]
+                self.log('TEST', f'Screensaver mode {mode}: heap delta={delta}')
+        self.cmd('screensaver.mode 0')  # restore default
+
     # === Main Loop ===
 
     def run(self):
@@ -347,6 +363,7 @@ class SoakTest:
             (self.test_ble, 1),
             (self.test_achievements, 1),
             (self.test_mixed_ops, 2),
+            (self.test_screensaver_soak, 1),
         ]:
             weighted.extend([fn] * w)
 
@@ -371,10 +388,20 @@ class SoakTest:
             if heap:
                 self.log('HEAP', f'free={heap[0]} min={heap[1]}')
 
-            # Idle soak every 10 cycles
+            # Idle soak every 10 cycles (90s triggers screensaver + one scene transition)
             if cycle % 10 == 0:
-                self.log('SOAK', 'Idle soak 30s')
-                self.cmd('test.idle 30000', timeout=40)
+                self.log('SOAK', 'Idle soak 90s')
+                self.cmd('test.idle 90000', timeout=100)
+
+            # Every 50 cycles, do a long idle soak (5 min) to test screensaver stability
+            if cycle % 50 == 0:
+                self.log('SOAK', f'Long idle soak at cycle {cycle} (300s)')
+                heap_before = self.check_heap(f'long_soak_start_{cycle}')
+                self.cmd('test.idle 300000', timeout=310)
+                heap_after = self.check_heap(f'long_soak_end_{cycle}')
+                if heap_before and heap_after:
+                    delta = heap_after[0] - heap_before[0]
+                    self.log('SOAK', f'Long soak heap delta: {delta} bytes')
 
             # Stress test every 20 cycles
             if cycle % 20 == 0:
