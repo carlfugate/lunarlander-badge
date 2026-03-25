@@ -86,6 +86,7 @@ uint16_t game_calc_score(const GameState &gs) {
 
 static GameState gs;
 static Scoreboard scoreboard;
+static uint8_t max_unlocked_difficulty = 0;
 static lv_timer_t *game_timer = NULL;
 static lv_timer_t *spectate_timer = NULL;
 static lv_timer_t *mp_timer = NULL;
@@ -179,6 +180,8 @@ static void multiplayer_tick_cb(lv_timer_t *t) {
         audio_thrust_stop();
         if (gs.phase == PHASE_LANDED) { audio_landed(); leds_landed(); }
         else { audio_crashed(); leds_crashed(); }
+        if (gs.phase == PHASE_LANDED && gs.difficulty >= max_unlocked_difficulty && max_unlocked_difficulty < 2)
+            max_unlocked_difficulty = gs.difficulty + 1;
         show_mp_game_over();
     }
 
@@ -304,6 +307,8 @@ static void game_tick_cb(lv_timer_t *t) {
         audio_landed();
         leds_landed();
         if (gs.mode == MODE_ONLINE_SOLO) net_disconnect();
+        if (gs.difficulty >= max_unlocked_difficulty && max_unlocked_difficulty < 2)
+            max_unlocked_difficulty = gs.difficulty + 1;
         show_game_over();
     } else if (gs.phase == PHASE_CRASHED) {
         lv_timer_del(game_timer);
@@ -482,6 +487,11 @@ static void show_difficulty_select() {
         lv_obj_t *lbl = lv_label_create(btn);
         lv_label_set_text(lbl, labels[i]);
         lv_obj_center(lbl);
+        if (i > max_unlocked_difficulty) {
+            lv_obj_set_style_bg_color(btn, lv_color_hex(0x222222), 0);
+            lv_obj_set_style_text_color(lv_obj_get_child(btn, 0), lv_color_hex(0x444444), 0);
+            lv_obj_clear_flag(btn, LV_OBJ_FLAG_CLICKABLE);
+        }
     }
 
     // Mode toggle label
