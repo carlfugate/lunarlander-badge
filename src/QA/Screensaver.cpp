@@ -1,6 +1,7 @@
 #include "QA/Screensaver.h"
 #include "QA/Menu.h"
 #include <lvgl.h>
+#include <math.h>
 
 static lv_timer_t *ss_timer = NULL;
 static lv_obj_t *ss_screen = NULL;
@@ -71,6 +72,32 @@ static void ss_tick(lv_timer_t *t) {
     // Lunar horizon
     for (int x = 200; x < 320; x++)
         if (220 < 240) buf[220 * 320 + x] = 0x4208;
+
+    // Orbital drift - tiny lander orbiting a moon
+    static float orbit_angle = 0;
+    orbit_angle += 0.02f;
+    if (orbit_angle > 6.283f) orbit_angle -= 6.283f;
+    // Small moon at center-left
+    int mx = 100, my = 120, mr = 8;
+    for (int dy = -mr; dy <= mr; dy++) {
+        for (int dx = -mr; dx <= mr; dx++) {
+            if (dx*dx + dy*dy <= mr*mr) {
+                int px = mx+dx, py = my+dy;
+                if (px >= 0 && px < 320 && py >= 0 && py < 240)
+                    buf[py * 320 + px] = 0x6B4D; // gray moon
+            }
+        }
+    }
+    // Lander on elliptical orbit
+    float ox = mx + cosf(orbit_angle) * 30;
+    float oy = my + sinf(orbit_angle) * 18; // elliptical
+    int lx = (int)ox, ly = (int)oy;
+    if (lx >= 1 && lx < 319 && ly >= 1 && ly < 239) {
+        buf[ly * 320 + lx] = 0xFFFF;       // white center
+        buf[ly * 320 + lx - 1] = 0xFFFF;
+        buf[ly * 320 + lx + 1] = 0xFFFF;
+        buf[(ly-1) * 320 + lx] = 0xFFFF;
+    }
 }
 
 static void ss_touch_cb(lv_event_t *e) {
