@@ -393,10 +393,8 @@ static void ss_tick(lv_timer_t *t) {
 
 #ifndef NATIVE_TEST
     ss_total_ticks++;
-    if (ss_total_ticks > 6000) {
-        esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0);
-        esp_deep_sleep_start();
-    }
+    // Deep sleep disabled — reboot loses all state (achievements, callsign loaded from SD).
+    // The screensaver itself is low-power enough for a conference day.
 #endif
 
     uint16_t *buf = (uint16_t *)ss_buf;
