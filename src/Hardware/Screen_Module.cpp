@@ -100,6 +100,25 @@ void displayBootTerminalHeader() {
     tft.setTextSize(1);
 }
 
+static const char* space_quotes[] = {
+    "\"That's one small step for man...\" - Armstrong",
+    "\"Houston, we've had a problem.\" - Swigert",
+    "\"Failure is not an option.\" - Kranz",
+    "\"I felt very, very small.\" - Aldrin",
+    "\"The Eagle has landed.\" - Armstrong",
+    "\"Ad astra per aspera.\" - Kansas motto",
+    "\"Godspeed, John Glenn.\" - Carpenter",
+    "\"Light this candle!\" - Shepard",
+    "\"For all mankind.\" - Apollo 11 plaque",
+    "\"Go at throttle up.\" - Challenger",
+    "\"Contact light.\" - Aldrin",
+    "\"The sky is not the limit.\" - Unknown",
+    "\"Per aspera ad astra.\" - Seneca",
+    "\"Exploration is in our nature.\" - Sagan",
+    "\"To the stars.\" - Ad Astra",
+};
+static const int NUM_QUOTES = sizeof(space_quotes) / sizeof(space_quotes[0]);
+
 void displayBootComplete(bool allOk) {
     tft.println("");
     if (allOk) {
@@ -109,9 +128,15 @@ void displayBootComplete(bool allOk) {
         tft.setTextColor(0xFE60, TFT_BLACK);  // Amber/orange
         tft.println("> Partial systems. Offline mode.");
     }
-    tft.println("");
+    // Random space quote
+    const char* quote = space_quotes[random(NUM_QUOTES)];
+    int qx = (320 - (int)strlen(quote) * 6) / 2;
+    if (qx < 4) qx = 4;
+    tft.setTextColor(0x6B4D, TFT_BLACK);
+    tft.setCursor(qx, 200);
+    tft.println(quote);
+
     tft.setTextColor(0x528A, TFT_BLACK);
-    // 28 chars * 6px = 168px at textSize 1, center on 320
     tft.setCursor(76, 220);
     tft.println("April 25, 2026 - Kansas City");
 }
