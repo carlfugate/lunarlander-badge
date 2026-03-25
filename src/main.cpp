@@ -8,6 +8,7 @@
 #include "QA/Callsign.h"
 #include "QA/Achievements.h"
 #include "QA/BlePresence.h"
+#include "QA/SerialCmd.h"
 
 #define CONF_WIFI_SSID "BSidesKC-2026"
 #define CONF_WIFI_PASS "Ad_Astra_2026"
@@ -180,6 +181,8 @@ void setup() {
     // Initialize BLE presence system
     ble_presence_init(callsign_get(), 0);
 
+    serial_cmd_init();
+
     // Initialize boot button
     pinMode(BOOT_BUTTON_PIN, INPUT_PULLUP);
     
@@ -244,5 +247,6 @@ void setup() {
 
 void loop() {
     lv_timer_handler();
+    serial_cmd_poll();
     delay(5);
 }

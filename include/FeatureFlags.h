@@ -8,3 +8,5 @@
 
 // Testing mode — enables debug output and test features
 #define FF_TESTING           0
+
+// #define FF_SERIAL_TEST  // Uncomment or add -DFF_SERIAL_TEST for test builds

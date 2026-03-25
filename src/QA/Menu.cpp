@@ -13,6 +13,7 @@
 #include "QA/Achievements.h"
 #include "QA/Reminder.h"
 #include "QA/BlePresence.h"
+#include "QA/SerialCmd.h"
 
 void create_checkin_window();
 void create_credits_window();
@@ -81,6 +82,7 @@ void load_screen_and_delete_old(lv_obj_t *new_scr) {
     lv_obj_t *old = lv_scr_act();
     lv_scr_load(new_scr);
     if (old && old != new_scr) lv_obj_del(old);
+    serial_cmd_log("NAV", "screen_change heap=%d", ESP.getFreeHeap());
 }
 
 void load_screen_and_delete_old_back(lv_obj_t *new_scr) {
