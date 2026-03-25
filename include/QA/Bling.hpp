@@ -6,7 +6,7 @@
 // Create the Bling window (RGB/LED effects menu)
 void create_bling_window();
 
-// Stop bling ticker and clear LEDs (safe to call from any context)
+// Stop bling animation and clear LEDs (safe to call from any context)
 void bling_stop_animation();
 
 #endif // QA_BLING_HPP

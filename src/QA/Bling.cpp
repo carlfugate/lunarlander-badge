@@ -3,9 +3,7 @@
 #include "Includes.h"
 #include "Hardware/NeoPixelControl.h"
 #include <Adafruit_NeoPixel.h>
-#include <Ticker.h>
-
-static Ticker bling_ticker;
+static lv_timer_t *bling_timer = NULL;
 static int bling_mode = 0; // 0=none, 1=rainbow, 2=police, 3=all blink, 4=chase, 5=random, 6=breathe, 7=aurora
 
 static void bling_animate();
@@ -124,7 +122,7 @@ static void bling_off() {
 }
 
 void bling_stop_animation() {
-    bling_ticker.detach();
+    if (bling_timer) { lv_timer_del(bling_timer); bling_timer = NULL; }
     bling_mode = 0;
     bling_off();
 }
@@ -161,15 +159,19 @@ static void bling_morse() {
     }
 }
 
+static void bling_timer_cb(lv_timer_t *t) {
+    bling_animate();
+}
+
 static void start_bling_animation(int mode) {
     bling_mode = mode;
-    bling_ticker.detach();
+    if (bling_timer) { lv_timer_del(bling_timer); bling_timer = NULL; }
     morse_pos = 0; morse_sub = 0;
     if (mode == 0) {
         bling_off();
         return;
     }
-    bling_ticker.attach_ms(200, bling_animate); // 200ms interval for all patterns
+    bling_timer = lv_timer_create(bling_timer_cb, 200, NULL);
 }
 
 static void bling_animate() {
@@ -194,7 +196,7 @@ void create_bling_window() {
     lv_obj_t *scr = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
     load_screen_and_delete_old(scr);
-    bling_ticker.detach();
+    if (bling_timer) { lv_timer_del(bling_timer); bling_timer = NULL; }
     bling_mode = 0;
 
     // HUD title
