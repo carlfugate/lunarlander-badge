@@ -40,7 +40,12 @@ void scoreboard_load(Scoreboard &sb) {
     f.read((uint8_t *)&sb, sizeof(sb));
     f.close();
     // Validate
-    if (sb.count > LN_MAX_SCORES) scoreboard_init(sb);
+    if (sb.count > LN_MAX_SCORES) { scoreboard_init(sb); return; }
+    for (int i = 0; i < sb.count; i++) {
+        if (sb.entries[i].score == 0 || sb.entries[i].score > 10000 || sb.entries[i].difficulty > 2) {
+            scoreboard_init(sb); return;
+        }
+    }
 }
 
 void scoreboard_save(const Scoreboard &sb) {
