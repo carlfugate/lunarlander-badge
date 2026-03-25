@@ -904,20 +904,6 @@ void display_main_menu_buttons() {
     }, LV_EVENT_PRESSED, NULL);
 }
 
-static void sys_btn_cb(lv_event_t *e) {
-    const char *action = (const char *)lv_event_get_user_data(e);
-    if (strcmp(action, "bling") == 0) create_bling_window();
-    else if (strcmp(action, "leds") == 0) {
-        ledStatus = !ledStatus;
-        for (int i = 0; i < numLeds; i++) digitalWrite(ledPins[i], ledStatus);
-    }
-    else if (strcmp(action, "buzzer") == 0) create_buzzer_window();
-    else if (strcmp(action, "sd") == 0) create_sd_card_window();
-    else if (strcmp(action, "battery") == 0) create_battery_window();
-    else if (strcmp(action, "ota") == 0) create_ota_window();
-    else if (strcmp(action, "system") == 0) create_system_info_window();
-}
-
 static void create_screensaver_picker() {
     lv_obj_t *scr = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
@@ -955,79 +941,73 @@ void create_system_submenu() {
     log_heap("enter create_system_submenu");
     lv_obj_t *scr = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
-    lv_obj_set_scroll_dir(scr, LV_DIR_VER);
     load_screen_and_delete_old(scr);
 
-    // Header
     lv_obj_t *hdr = lv_label_create(scr);
     lv_label_set_text(hdr, LV_SYMBOL_SETTINGS " System");
     lv_obj_set_style_text_color(hdr, lv_color_hex(0x00e5ff), 0);
-    lv_obj_align(hdr, LV_ALIGN_TOP_LEFT, 8, 6);
+    lv_obj_align(hdr, LV_ALIGN_TOP_LEFT, 8, 4);
 
-    // List items
-    static const char *labels[] = {"Bling", "LEDs", "Buzzer", "SD Card", "Battery", "OTA Update", "System Info"};
-    static const char *actions[] = {"bling", "leds", "buzzer", "sd", "battery", "ota", "system"};
-    for (int i = 0; i < 7; i++) {
+    struct SysItem {
+        const char *label;
+        const char *icon;
+        void (*action)();
+    };
+    static const SysItem items[] = {
+        {"Bling",    LV_SYMBOL_TINT,         []() { create_bling_window(); }},
+        {"LEDs",     LV_SYMBOL_CHARGE,       []() { ledStatus = !ledStatus; for (int i = 0; i < numLeds; i++) digitalWrite(ledPins[i], ledStatus); }},
+        {"Buzzer",   LV_SYMBOL_AUDIO,        []() { create_buzzer_window(); }},
+        {"SD Card",  LV_SYMBOL_DRIVE,        []() { create_sd_card_window(); }},
+        {"Battery",  LV_SYMBOL_BATTERY_FULL, []() { create_battery_window(); }},
+        {"OTA",      LV_SYMBOL_DOWNLOAD,     []() { create_ota_window(); }},
+        {"Info",     LV_SYMBOL_LIST,         []() { create_system_info_window(); }},
+        {"Callsign", LV_SYMBOL_EDIT,         []() { create_callsign_window(); }},
+        {"Screen",   LV_SYMBOL_IMAGE,        []() { create_screensaver_picker(); }},
+    };
+    int n = sizeof(items) / sizeof(items[0]);
+
+    for (int i = 0; i < n; i++) {
+        int col = i % 2;
+        int row = i / 2;
         lv_obj_t *btn = lv_btn_create(scr);
-        lv_obj_set_size(btn, 304, 22);
-        lv_obj_set_pos(btn, 8, 26 + i * 24);
-        lv_obj_set_style_bg_color(btn, lv_color_hex(0x0a0a0f), 0);
-        lv_obj_set_style_border_side(btn, LV_BORDER_SIDE_BOTTOM, 0);
-        lv_obj_set_style_border_width(btn, 1, 0);
-        lv_obj_set_style_border_color(btn, lv_color_hex(0x222222), 0);
-        lv_obj_set_style_radius(btn, 0, 0);
-        lv_obj_set_style_pad_all(btn, 0, 0);
-        lv_obj_add_event_cb(btn, sys_btn_cb, LV_EVENT_CLICKED, (void *)actions[i]);
+        lv_obj_set_size(btn, 152, 30);
+        lv_obj_set_pos(btn, 4 + col * 156, 24 + row * 34);
+        lv_obj_set_style_bg_color(btn, lv_color_hex(0x1a1a2e), 0);
+        lv_obj_set_style_radius(btn, 6, 0);
+        lv_obj_add_event_cb(btn, [](lv_event_t *e) {
+            auto fn = (void(*)())lv_event_get_user_data(e);
+            fn();
+        }, LV_EVENT_CLICKED, (void*)items[i].action);
         lv_obj_t *lbl = lv_label_create(btn);
-        lv_label_set_text(lbl, labels[i]);
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%s %s", items[i].icon, items[i].label);
+        lv_label_set_text(lbl, buf);
         lv_obj_set_style_text_color(lbl, lv_color_hex(0xcccccc), 0);
-        lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 4, 0);
-        lv_obj_t *arrow = lv_label_create(btn);
-        lv_label_set_text(arrow, LV_SYMBOL_RIGHT);
-        lv_obj_set_style_text_color(arrow, lv_color_hex(0x555555), 0);
-        lv_obj_align(arrow, LV_ALIGN_RIGHT_MID, -4, 0);
+        lv_obj_center(lbl);
     }
 
-    // Sound toggle button
+    // Sound toggle — special button with mute state
+    int snd_row = n / 2;
+    int snd_col = n % 2;
     lv_obj_t *snd_btn = lv_btn_create(scr);
-    lv_obj_set_size(snd_btn, 100, 28);
-    lv_obj_set_pos(snd_btn, 8, 26 + 7 * 24);
-    lv_obj_set_style_bg_color(snd_btn, lv_color_hex(0x333333), 0);
+    lv_obj_set_size(snd_btn, 152, 30);
+    lv_obj_set_pos(snd_btn, 4 + snd_col * 156, 24 + snd_row * 34);
+    lv_obj_set_style_bg_color(snd_btn, audio_is_muted() ? lv_color_hex(0x2e1a1a) : lv_color_hex(0x1a2e1a), 0);
+    lv_obj_set_style_radius(snd_btn, 6, 0);
     lv_obj_add_event_cb(snd_btn, [](lv_event_t *e) {
         audio_set_mute(!audio_is_muted());
-        lv_obj_t *lbl = lv_obj_get_child((lv_obj_t*)lv_event_get_target(e), 0);
-        lv_label_set_text(lbl, audio_is_muted() ? LV_SYMBOL_MUTE " MUTED" : LV_SYMBOL_AUDIO " SOUND");
         audio_click();
+        create_system_submenu(); // refresh to update button state
     }, LV_EVENT_CLICKED, NULL);
     lv_obj_t *snd_lbl = lv_label_create(snd_btn);
-    lv_label_set_text(snd_lbl, audio_is_muted() ? LV_SYMBOL_MUTE " MUTED" : LV_SYMBOL_AUDIO " SOUND");
+    lv_label_set_text(snd_lbl, audio_is_muted() ? LV_SYMBOL_MUTE " Muted" : LV_SYMBOL_AUDIO " Sound");
+    lv_obj_set_style_text_color(snd_lbl, audio_is_muted() ? lv_color_hex(0xff6666) : lv_color_hex(0x66ff66), 0);
     lv_obj_center(snd_lbl);
-
-    // Callsign button
-    lv_obj_t *cs_btn = lv_btn_create(scr);
-    lv_obj_set_size(cs_btn, 100, 28);
-    lv_obj_set_pos(cs_btn, 116, 26 + 7 * 24);
-    lv_obj_set_style_bg_color(cs_btn, lv_color_hex(0x333333), 0);
-    lv_obj_add_event_cb(cs_btn, [](lv_event_t *e) { create_callsign_window(); }, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *cs_lbl = lv_label_create(cs_btn);
-    lv_label_set_text(cs_lbl, LV_SYMBOL_EDIT " CALL");
-    lv_obj_center(cs_lbl);
-
-    // Screensaver button
-    lv_obj_t *ss_btn = lv_btn_create(scr);
-    lv_obj_set_size(ss_btn, 100, 28);
-    lv_obj_set_pos(ss_btn, 224, 26 + 7 * 24);
-    lv_obj_set_style_bg_color(ss_btn, lv_color_hex(0x333333), 0);
-    lv_obj_add_event_cb(ss_btn, [](lv_event_t *e) { create_screensaver_picker(); }, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *ss_lbl = lv_label_create(ss_btn);
-    lv_label_set_text(ss_lbl, LV_SYMBOL_IMAGE " Screen");
-    lv_obj_set_style_text_color(ss_lbl, lv_color_hex(0xcccccc), 0);
-    lv_obj_center(ss_lbl);
 
     // Back button
     lv_obj_t *back = lv_btn_create(scr);
     lv_obj_set_size(back, 80, 28);
-    lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -8);
+    lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -4);
     lv_obj_set_style_bg_color(back, lv_color_hex(0x222222), 0);
     lv_obj_add_event_cb(back, [](lv_event_t *e) { create_main_menu(false); }, LV_EVENT_CLICKED, NULL);
     lv_obj_t *bl = lv_label_create(back);
