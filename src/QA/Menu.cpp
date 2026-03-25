@@ -67,11 +67,15 @@ static void log_heap(const char *tag) {
 }
 
 void load_screen_and_delete_old(lv_obj_t *new_scr) {
-    lv_scr_load_anim(new_scr, LV_SCR_LOAD_ANIM_MOVE_LEFT, 200, 0, true);
+    lv_obj_t *old = lv_scr_act();
+    lv_scr_load(new_scr);
+    if (old && old != new_scr) lv_obj_del(old);
 }
 
 void load_screen_and_delete_old_back(lv_obj_t *new_scr) {
-    lv_scr_load_anim(new_scr, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 200, 0, true);
+    lv_obj_t *old = lv_scr_act();
+    lv_scr_load(new_scr);
+    if (old && old != new_scr) lv_obj_del(old);
 }
 
 // Modern button style with gradient and shadow, now supports custom colors

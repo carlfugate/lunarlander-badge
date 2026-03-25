@@ -107,22 +107,11 @@ void leds_fuel_gauge(float fuel, float max_fuel) {
 }
 
 void leds_landed() {
-    for (int flash = 0; flash < 3; flash++) {
-        setAllPixels(packColor(0, 255, 0));
-        delay(100);
-        setAllPixels(0);
-        delay(100);
-    }
-    setAllPixels(packColor(0, 80, 0));
+    setAllPixels(packColor(0, 255, 0));
 }
 
 void leds_crashed() {
-    for (int flash = 0; flash < 5; flash++) {
-        setAllPixels(packColor(255, 0, 0));
-        delay(50);
-        setAllPixels(0);
-        delay(50);
-    }
+    setAllPixels(packColor(255, 0, 0));
 }
 
 void leds_idle() { clearNeoPixels(); }
@@ -161,24 +150,13 @@ void leds_team_color(uint8_t player_index) {
 
 void audio_achievement() {
     if (s_muted) return;
-    tone(BUZZER_PIN, 784, 80); delay(100);
-    tone(BUZZER_PIN, 1047, 80); delay(100);
-    delay(80);
-    tone(BUZZER_PIN, 1319, 300);
-    delay(350);
-    noTone(BUZZER_PIN);
+    tone(BUZZER_PIN, 784, 80);
 }
 
 void leds_achievement() {
-    for (int i = 0; i < NUM_NEOPIXELS; i++) {
-        setNeoPixelColor(i, Adafruit_NeoPixel::ColorHSV(i * 65536L / NUM_NEOPIXELS, 255, 200));
-        delay(100);
-    }
-    delay(200);
+    // Quick gold flash — non-blocking
     for (int i = 0; i < NUM_NEOPIXELS; i++)
         setNeoPixelColor(i, Adafruit_NeoPixel::Color(255, 180, 0));
-    delay(1000);
-    clearNeoPixels();
 }
 
 #else // NATIVE_TEST stubs
