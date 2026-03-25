@@ -85,9 +85,11 @@ static void ss_tick(lv_timer_t *t) {
             }
         }
     }
-    // Lunar horizon
-    for (int x = 200; x < 320; x++)
-        if (220 < 240) buf[220 * 320 + x] = 0x4208;
+    // Lunar horizon (only when earth is near)
+    if (earth_y < 240) {
+        for (int x = 200; x < 320; x++)
+            buf[220 * 320 + x] = 0x4208;
+    }
 
     // Orbital drift - tiny lander orbiting a moon
     static float orbit_angle = 0;
