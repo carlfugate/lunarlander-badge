@@ -106,9 +106,42 @@ void bling_stop_animation() {
     bling_off();
 }
 
+static const char* morse_ad_astra = ".- -..  .- ... - .-. .-"; // AD ASTRA
+static int morse_pos = 0;
+static int morse_sub = 0; // sub-tick within element
+
+static inline uint32_t packColor(uint8_t r, uint8_t g, uint8_t b) {
+    return Adafruit_NeoPixel::Color(r, g, b);
+}
+
+static void setAllPixels(uint32_t color) {
+    for (int i = 0; i < NUM_NEOPIXELS; i++) setNeoPixelColor(i, color);
+}
+
+static void bling_morse() {
+    char c = morse_ad_astra[morse_pos];
+    if (c == '\0') { morse_pos = 0; clearNeoPixels(); return; }
+    if (c == ' ') {
+        clearNeoPixels();
+        morse_sub++;
+        if (morse_sub >= 3) { morse_sub = 0; morse_pos++; }
+    } else if (c == '.') {
+        if (morse_sub == 0) setAllPixels(packColor(0, 180, 255));
+        else clearNeoPixels();
+        morse_sub++;
+        if (morse_sub >= 2) { morse_sub = 0; morse_pos++; }
+    } else if (c == '-') {
+        if (morse_sub < 3) setAllPixels(packColor(0, 180, 255));
+        else clearNeoPixels();
+        morse_sub++;
+        if (morse_sub >= 4) { morse_sub = 0; morse_pos++; }
+    }
+}
+
 static void start_bling_animation(int mode) {
     bling_mode = mode;
     bling_ticker.detach();
+    morse_pos = 0; morse_sub = 0;
     if (mode == 0) {
         bling_off();
         return;
@@ -125,6 +158,7 @@ static void bling_animate() {
         case 5: bling_random(); break;
         case 6: bling_breathing(); break;
         case 7: bling_aurora(); break;
+        case 8: bling_morse(); break;
         default: bling_off(); break;
     }
 }
@@ -140,6 +174,7 @@ static void bling_button_event_cb(lv_event_t* e) {
     else if (strcmp(label, "Random") == 0) start_bling_animation(5);
     else if (strcmp(label, "Breathe") == 0) start_bling_animation(6);
     else if (strcmp(label, "Aurora") == 0) start_bling_animation(7);
+    else if (strcmp(label, "Morse") == 0) start_bling_animation(8);
     else if (strcmp(label, "Off") == 0) start_bling_animation(0);
 }
 
@@ -155,7 +190,7 @@ void create_bling_window() {
     bling_mode = 0;
 
     // Add Bling buttons (restored from previous working version)
-    const char* bling_modes[] = {"Rainbow", "Police", "All Blink", "Chase", "Random", "Breathe", "Aurora", "Off"};
+    const char* bling_modes[] = {"Rainbow", "Police", "All Blink", "Chase", "Random", "Breathe", "Aurora", "Morse", "Off"};
     int num_modes = sizeof(bling_modes)/sizeof(bling_modes[0]);
     for (int i = 0; i < num_modes; ++i) {
         lv_obj_t* btn = lv_btn_create(BlingWindow);

@@ -5,6 +5,7 @@
 #include "Hardware/Screen_Module.h"
 #include "Hardware/RotaryEncoder_Module.h"
 #include "Hardware/BadgeRegistration.h" // For badge registration
+#include "QA/Callsign.h"
 
 #define CONF_WIFI_SSID "BSidesKC-2026"
 #define CONF_WIFI_PASS "Ad_Astra_2026"
@@ -167,6 +168,9 @@ void setup() {
 
     // Initialize rotary encoder
     RotaryEncoder_Module_Init();
+
+    // Load callsign from SD
+    callsign_init();
 
     // Initialize boot button
     pinMode(BOOT_BUTTON_PIN, INPUT_PULLUP);

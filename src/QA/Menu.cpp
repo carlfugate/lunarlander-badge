@@ -9,6 +9,7 @@
 #include "Game/LunarState.h"
 #include "Game/LunarAudio.h"
 #include "QA/Screensaver.h"
+#include "QA/Callsign.h"
 
 void create_checkin_window();
 void create_credits_window();
@@ -526,6 +527,66 @@ void create_credits_window(){
     lv_label_set_text(bl, LV_SYMBOL_LEFT " BACK");
     lv_obj_set_style_text_color(bl, lv_color_hex(0x888888), 0);
     lv_obj_center(bl);
+
+    // Credits crawl easter egg - starts after 10s
+    static lv_timer_t *crawl_timer = NULL;
+    if (crawl_timer) lv_timer_del(crawl_timer);
+    crawl_timer = lv_timer_create([](lv_timer_t *t) {
+        lv_timer_del(t);
+        lv_obj_t *scr = lv_obj_create(NULL);
+        lv_obj_set_style_bg_color(scr, lv_color_black(), 0);
+        load_screen_and_delete_old(scr);
+
+        lv_obj_t *crawl = lv_label_create(scr);
+        lv_label_set_text(crawl,
+            "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+            "A long time ago\n"
+            "in a city on the plains...\n\n\n"
+            "A band of pirates forged\n"
+            "silicon and code into\n"
+            "something extraordinary.\n\n\n"
+            "The badges were crafted\n"
+            "with care, but customs\n"
+            "had other plans.\n\n\n"
+            "Held at the border,\n"
+            "the hardware arrived\n"
+            "fashionably late.\n\n\n"
+            "But the crew would\n"
+            "not be stopped.\n\n\n"
+            "They built a game.\n"
+            "A lunar lander.\n"
+            "For the badge that\n"
+            "missed its moment.\n\n\n"
+            "Ad astra per aspera.\n"
+            "To the stars,\n"
+            "through difficulties.\n\n\n\n"
+            "BSidesKC 2026\n"
+            "Kansas City\n\n"
+            "FIN"
+        );
+        lv_obj_set_style_text_color(crawl, lv_color_hex(0x00e5ff), 0);
+        lv_obj_set_style_text_align(crawl, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_width(crawl, 300);
+        lv_obj_align(crawl, LV_ALIGN_TOP_MID, 0, 240); // start below screen
+
+        // Animate scrolling up
+        lv_anim_t a;
+        lv_anim_init(&a);
+        lv_anim_set_var(&a, crawl);
+        lv_anim_set_values(&a, 240, -800);
+        lv_anim_set_duration(&a, 30000); // 30 seconds
+        lv_anim_set_exec_cb(&a, [](void *obj, int32_t v) {
+            lv_obj_set_y((lv_obj_t*)obj, v);
+        });
+        lv_anim_start(&a);
+
+        // Touch to exit
+        lv_obj_add_flag(scr, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(scr, [](lv_event_t *e) {
+            create_credits_window();
+        }, LV_EVENT_CLICKED, NULL);
+    }, 10000, NULL);
+    lv_timer_set_repeat_count(crawl_timer, 1);
 }
 
 //----------------------------------------------------
@@ -929,6 +990,16 @@ static void create_system_submenu() {
     lv_obj_t *snd_lbl = lv_label_create(snd_btn);
     lv_label_set_text(snd_lbl, audio_is_muted() ? LV_SYMBOL_MUTE " MUTED" : LV_SYMBOL_AUDIO " SOUND");
     lv_obj_center(snd_lbl);
+
+    // Callsign button
+    lv_obj_t *cs_btn = lv_btn_create(scr);
+    lv_obj_set_size(cs_btn, 100, 36);
+    lv_obj_set_pos(cs_btn, 116, 28 + 7 * 26);
+    lv_obj_set_style_bg_color(cs_btn, lv_color_hex(0x333333), 0);
+    lv_obj_add_event_cb(cs_btn, [](lv_event_t *e) { create_callsign_window(); }, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *cs_lbl = lv_label_create(cs_btn);
+    lv_label_set_text(cs_lbl, LV_SYMBOL_EDIT " CALL");
+    lv_obj_center(cs_lbl);
 
     // Back button
     lv_obj_t *back = lv_btn_create(scr);
