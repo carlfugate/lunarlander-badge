@@ -55,22 +55,31 @@ void achievement_unlock(uint8_t id) {
 }
 
 int achievements_total() { return s_total; }
+int achievements_games_played() { return s_games_played; }
 
 void achievements_increment_games() {
-    s_games_played++;
-    achievements_save();
-    if (s_games_played >= 10) achievement_unlock(ACH_MARATHON);
-}
 
 void create_achievements_window() {
     lv_obj_t *scr = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
     load_screen_and_delete_old(scr);
 
+    // HUD title
     lv_obj_t *title = lv_label_create(scr);
     lv_label_set_text_fmt(title, "MISSION PATCHES  %d/%d", s_total, ACH_COUNT);
     lv_obj_set_style_text_color(title, lv_color_hex(0x00e5ff), 0);
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
+    lv_obj_set_style_text_font(title, &lv_font_unscii_8, 0);
+    lv_obj_set_pos(title, 8, 8);
+
+    // Accent line
+    lv_obj_t *line = lv_obj_create(scr);
+    lv_obj_set_size(line, 312, 1);
+    lv_obj_set_pos(line, 4, 22);
+    lv_obj_set_style_bg_color(line, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_border_width(line, 0, 0);
+    lv_obj_set_style_radius(line, 0, 0);
+    lv_obj_set_style_pad_all(line, 0, 0);
+    lv_obj_clear_flag(line, LV_OBJ_FLAG_SCROLLABLE);
 
     for (int i = 0; i < ACH_COUNT; i++) {
         lv_obj_t *row = lv_label_create(scr);
@@ -81,10 +90,18 @@ void create_achievements_window() {
             lv_label_set_text_fmt(row, LV_SYMBOL_CLOSE " %s", ach_names[i]);
             lv_obj_set_style_text_color(row, lv_color_hex(0x444444), 0);
         }
-        lv_obj_align(row, LV_ALIGN_TOP_LEFT, 20, 24 + i * 22);
+        lv_obj_set_pos(row, 20, 28 + i * 22);
     }
 
-    create_back_button(scr);
+    lv_obj_t *back = lv_btn_create(scr);
+    lv_obj_set_size(back, 80, 28);
+    lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -4);
+    lv_obj_set_style_bg_color(back, lv_color_hex(0x222222), 0);
+    lv_obj_add_event_cb(back, [](lv_event_t *e) { create_main_menu(false); }, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *bl = lv_label_create(back);
+    lv_label_set_text(bl, LV_SYMBOL_LEFT " BACK");
+    lv_obj_set_style_text_color(bl, lv_color_hex(0x888888), 0);
+    lv_obj_center(bl);
 }
 
 #else // NATIVE_TEST stubs
@@ -102,9 +119,5 @@ void achievement_unlock(uint8_t id) {
     s_total++;
 }
 int achievements_total() { return s_total; }
+int achievements_games_played() { return s_games_played; }
 void achievements_increment_games() {
-    s_games_played++;
-    if (s_games_played >= 10) achievement_unlock(ACH_MARATHON);
-}
-
-#endif

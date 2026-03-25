@@ -165,10 +165,22 @@ void create_bling_window() {
     bling_ticker.detach();
     bling_mode = 0;
 
+    // HUD title
     lv_obj_t *hdr = lv_label_create(scr);
-    lv_label_set_text(hdr, LV_SYMBOL_TINT " Bling");
+    lv_label_set_text(hdr, "LED ARRAY CONTROL");
     lv_obj_set_style_text_color(hdr, lv_color_hex(0x00e5ff), 0);
-    lv_obj_align(hdr, LV_ALIGN_TOP_LEFT, 8, 4);
+    lv_obj_set_style_text_font(hdr, &lv_font_unscii_8, 0);
+    lv_obj_set_pos(hdr, 8, 8);
+
+    // Accent line
+    lv_obj_t *line = lv_obj_create(scr);
+    lv_obj_set_size(line, 312, 1);
+    lv_obj_set_pos(line, 4, 22);
+    lv_obj_set_style_bg_color(line, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_border_width(line, 0, 0);
+    lv_obj_set_style_radius(line, 0, 0);
+    lv_obj_set_style_pad_all(line, 0, 0);
+    lv_obj_clear_flag(line, LV_OBJ_FLAG_SCROLLABLE);
 
     static const struct { const char *name; int mode; } modes[] = {
         {"Rainbow",  1}, {"Police",  2}, {"Blink",   3},
@@ -179,9 +191,9 @@ void create_bling_window() {
     for (int i = 0; i < 9; i++) {
         lv_obj_t *btn = lv_btn_create(scr);
         lv_obj_set_size(btn, 100, 48);
-        lv_obj_set_pos(btn, 4 + (i % 3) * 106, 24 + (i / 3) * 54);
+        lv_obj_set_pos(btn, 4 + (i % 3) * 106, 26 + (i / 3) * 52);
         lv_obj_set_style_bg_color(btn, lv_color_hex(0x1a1a2e), 0);
-        lv_obj_set_style_radius(btn, 8, 0);
+        lv_obj_set_style_radius(btn, 6, 0);
         lv_obj_add_event_cb(btn, [](lv_event_t *e) {
             start_bling_animation((int)(intptr_t)lv_event_get_user_data(e));
         }, LV_EVENT_CLICKED, (void*)(intptr_t)modes[i].mode);
