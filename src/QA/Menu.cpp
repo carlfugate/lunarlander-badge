@@ -13,6 +13,34 @@ void create_checkin_window();
 void create_credits_window();
 static void create_system_submenu();
 
+// Konami code easter egg: ↑↑↓↓←→←→ via touch screen edges
+static const int konami_seq[] = {0,0,1,1,2,3,2,3}; // 0=up,1=down,2=left,3=right
+static int konami_pos = 0;
+static bool konami_unlocked = false;
+
+static int touch_to_direction(int x, int y) {
+    if (y < 40) return 0;
+    if (y > 200) return 1;
+    if (x < 60) return 2;
+    if (x > 260) return 3;
+    return -1;
+}
+
+static void konami_check(int dir) {
+    if (dir < 0) return;
+    if (dir == konami_seq[konami_pos]) {
+        konami_pos++;
+        if (konami_pos >= 8) {
+            konami_pos = 0;
+            konami_unlocked = true;
+            for (int i = 0; i < 6; i++)
+                setNeoPixelColor(i, Adafruit_NeoPixel::ColorHSV(i * 65536L / 6, 255, 255));
+        }
+    } else {
+        konami_pos = (dir == konami_seq[0]) ? 1 : 0;
+    }
+}
+
 // External variables
 extern bool max17048_available;  // Defined in main.cpp
 
@@ -640,6 +668,37 @@ void display_main_menu_buttons() {
     lv_obj_set_style_text_color(batt, lv_color_hex(0x888888), 0);
     lv_obj_align(batt, LV_ALIGN_RIGHT_MID, -8, 0);
 
+    // MET clock
+    static lv_obj_t *met_label = NULL;
+    met_label = lv_label_create(hdr);
+    lv_obj_set_style_text_color(met_label, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_text_font(met_label, &lv_font_montserrat_14, 0);
+    lv_obj_align(met_label, LV_ALIGN_CENTER, 0, 0);
+    lv_label_set_text(met_label, "MET 00:00:00");
+
+    static lv_timer_t *met_timer = NULL;
+    if (met_timer) lv_timer_del(met_timer);
+    met_timer = lv_timer_create([](lv_timer_t *t) {
+        if (!met_label) return;
+        uint32_t elapsed = (millis() - badge_boot_ms) / 1000;
+        uint32_t h = elapsed / 3600;
+        uint32_t m = (elapsed % 3600) / 60;
+        uint32_t s = elapsed % 60;
+
+        // Easter egg: 42 (4h 2m 0s = 14520s)
+        static bool answer_shown = false;
+        if (elapsed == 14520 && !answer_shown) {
+            answer_shown = true;
+            lv_label_set_text(met_label, "The answer is 42");
+            for (int i = 0; i < NUM_NEOPIXELS; i++) setNeoPixelColor(i, 0xFFFFFF);
+        } else if (answer_shown && elapsed > 14520 && elapsed <= 14525) {
+            // Hold easter egg text for 5 seconds
+        } else {
+            if (answer_shown && elapsed > 14525) answer_shown = false;
+            lv_label_set_text_fmt(met_label, "MET %02lu:%02lu:%02lu", h, m, s);
+        }
+    }, 1000, NULL);
+
     // Featured buttons: Lander + Schedule side by side
     lv_obj_t *lander_btn = lv_btn_create(main_menu);
     lv_obj_set_size(lander_btn, 148, 48);
@@ -738,6 +797,14 @@ void display_main_menu_buttons() {
     lv_label_set_text(ver, "v" BADGE_VERSION);
     lv_obj_set_style_text_color(ver, lv_color_hex(0x333333), 0);
     lv_obj_align(ver, LV_ALIGN_BOTTOM_RIGHT, -8, -4);
+
+    // Konami code touch detector
+    lv_obj_add_flag(main_menu, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(main_menu, [](lv_event_t *e) {
+        lv_point_t p;
+        lv_indev_get_point(lv_indev_active(), &p);
+        konami_check(touch_to_direction(p.x, p.y));
+    }, LV_EVENT_PRESSED, NULL);
 }
 
 static void sys_btn_cb(lv_event_t *e) {
