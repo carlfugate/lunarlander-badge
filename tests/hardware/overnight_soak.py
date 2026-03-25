@@ -339,6 +339,173 @@ class SoakTest:
                 self.log('TEST', f'Screensaver mode {mode}: heap delta={delta}')
         self.cmd('screensaver.mode 0')  # restore default
 
+    # === Concurrent / Conflict Tests ===
+
+    def test_bling_during_navigation(self):
+        """Start bling, navigate 10 screens without stopping it."""
+        self.log('TEST', 'CONFLICT: bling active during navigation')
+        self.cmd('bling.set 1')  # rainbow
+        for _ in range(10):
+            screen = random.choice(SCREENS)
+            self.cmd(f'nav.{screen}')
+            time.sleep(0.3)
+        self.cmd('nav.main')
+        self.cmd('bling.off')
+
+    def test_bling_then_game(self):
+        """Start bling, launch game, play briefly, exit. Tests bling_stop_animation."""
+        self.log('TEST', 'CONFLICT: bling -> game transition')
+        modes = [1, 2, 5, 7]  # rainbow, police, random, aurora
+        for mode in modes:
+            self.cmd(f'bling.set {mode}')
+            time.sleep(0.5)
+            self.cmd('nav.game')  # should stop bling
+            time.sleep(1)
+            self.cmd('nav.main')  # back out
+            time.sleep(0.3)
+            # Verify bling is stopped
+            resp = self.cmd('bling.status')
+            if resp and 'mode=0' not in resp:
+                self.log('WARN', f'Bling not stopped after game! resp={resp}')
+        self.cmd('bling.off')
+
+    def test_game_rapid_start_stop(self):
+        """Start and exit game 20 times rapidly. Tests cleanup paths."""
+        self.log('TEST', 'STRESS: rapid game start/stop x20')
+        heap_before = self.badge.get_heap()
+        for i in range(20):
+            self.cmd('nav.game')
+            time.sleep(0.2)
+            self.cmd('nav.main')
+            time.sleep(0.2)
+        heap_after = self.badge.get_heap()
+        if heap_before and heap_after:
+            delta = heap_after[0] - heap_before[0]
+            self.log('TEST', f'Game start/stop heap delta: {delta}')
+            if delta < -2000:
+                self.log('LEAK', f'Possible game cleanup leak: {delta} bytes')
+                self.stats['heap_warnings'] += 1
+
+    def test_ble_during_everything(self):
+        """BLE scanning while cycling screens + bling."""
+        self.log('TEST', 'CONFLICT: BLE + bling + navigation')
+        self.cmd('bling.set 3')  # blink
+        for _ in range(8):
+            self.cmd(f'nav.{random.choice(SCREENS)}')
+            self.cmd('ble.status')
+            time.sleep(0.3)
+        self.cmd('ble.send 5')  # send a message while bling is running
+        self.cmd('nav.main')
+        self.cmd('bling.off')
+
+    def test_screensaver_interrupt(self):
+        """Idle to screensaver, wake, immediately start game."""
+        self.log('TEST', 'CONFLICT: screensaver -> immediate game')
+        self.cmd('nav.main')
+        # Idle 65s to trigger screensaver
+        self.log('TEST', 'Idling 65s for screensaver...')
+        # Use test.idle but send nav.game during it to interrupt
+        self.cmd('test.idle 65000', timeout=70)
+        # Screensaver should be active now, immediately navigate
+        self.cmd('nav.game')
+        time.sleep(1)
+        self.cmd('nav.main')
+        heap = self.badge.get_heap()
+        if heap:
+            self.log('TEST', f'After screensaver->game->main: heap={heap[0]}')
+
+    def test_achievement_during_game(self):
+        """Force-unlock achievement while game is theoretically running."""
+        self.log('TEST', 'CONFLICT: achievement unlock during game context')
+        self.cmd('nav.game')
+        time.sleep(0.5)
+        # Force unlock while on game screen (achievement triggers LED+audio)
+        self.cmd('achievements.unlock 3')
+        time.sleep(0.5)
+        self.cmd('nav.main')
+
+    def test_callsign_during_ble(self):
+        """Change callsign while BLE is advertising."""
+        self.log('TEST', 'CONFLICT: callsign change during BLE')
+        self.cmd('ble.status')
+        for name in ['TEST1', 'TEST2', 'TEST3', 'EAGLE']:
+            self.cmd(f'callsign.set {name}')
+            self.cmd('ble.status')
+            time.sleep(0.3)
+
+    def test_concurrent_timers(self):
+        """Bling ticker + MET timer + BLE scan all active, navigate around."""
+        self.log('TEST', 'CONFLICT: multiple timers + navigation')
+        self.cmd('bling.set 4')  # chase (uses ticker)
+        self.cmd('nav.main')     # MET timer active
+        # Navigate while all timers running
+        for _ in range(15):
+            self.cmd(f'nav.{random.choice(SCREENS)}')
+            time.sleep(0.2)
+        self.cmd('nav.main')
+        self.cmd('bling.off')
+
+    def test_rapid_bling_mode_switch(self):
+        """Switch bling modes every 200ms for 10 seconds."""
+        self.log('TEST', 'STRESS: rapid bling switching x50')
+        for _ in range(50):
+            self.cmd(f'bling.set {random.choice(BLING_MODES)}')
+            time.sleep(0.1)
+        self.cmd('bling.off')
+
+    def test_nav_during_screensaver(self):
+        """Send nav commands while screensaver is active (via test.idle).
+        Since serial_cmd_poll runs inside test.idle, we can send commands mid-idle."""
+        self.log('TEST', 'CONFLICT: navigation during active screensaver')
+        self.cmd('nav.main')
+        # Start a long idle (badge stays responsive via serial_cmd_poll)
+        self.badge.send('test.idle 70000', timeout=5)  # starts idle, returns quickly since badge responds during idle
+        time.sleep(65)  # wait for screensaver to trigger
+        # Now screensaver is active, send nav commands
+        self.cmd('nav.system')
+        time.sleep(1)
+        self.cmd('nav.bling')
+        time.sleep(1)
+        self.cmd('nav.main')
+        # Wait for idle to finish
+        time.sleep(10)
+        heap = self.badge.get_heap()
+        if heap:
+            self.log('TEST', f'After nav-during-screensaver: heap={heap[0]}')
+
+    def test_wifi_scan_during_bling(self):
+        """Navigate to WiFi scan while bling is running."""
+        self.log('TEST', 'CONFLICT: WiFi scan + bling')
+        self.cmd('bling.set 2')  # police
+        self.cmd('nav.wifi')
+        time.sleep(2)  # WiFi screen may trigger scan
+        self.cmd('nav.main')
+        self.cmd('bling.off')
+
+    def test_everything_at_once(self):
+        """Kitchen sink: bling + BLE + rapid nav + callsign changes."""
+        self.log('TEST', 'CHAOS: everything at once')
+        self.cmd('bling.set 1')  # rainbow
+        for _ in range(20):
+            op = random.randint(0, 5)
+            if op == 0:
+                self.cmd(f'nav.{random.choice(SCREENS)}')
+            elif op == 1:
+                self.cmd(f'bling.set {random.choice(BLING_MODES)}')
+            elif op == 2:
+                self.cmd('ble.status')
+            elif op == 3:
+                self.cmd(f'callsign.set {random.choice(CALLSIGNS)}')
+            elif op == 4:
+                self.cmd('audio.mute' if random.random() > 0.5 else 'audio.unmute')
+            elif op == 5:
+                self.cmd('sys.heap')
+            time.sleep(0.15)
+        self.cmd('nav.main')
+        self.cmd('bling.off')
+        self.cmd('audio.unmute')
+        self.cmd('callsign.set EAGLE')
+
     # === Main Loop ===
 
     def run(self):
@@ -368,6 +535,17 @@ class SoakTest:
             (self.test_achievements, 1),
             (self.test_mixed_ops, 2),
             (self.test_screensaver_soak, 1),
+            # Concurrent / conflict tests (higher weight = more frequent)
+            (self.test_bling_during_navigation, 3),
+            (self.test_bling_then_game, 2),
+            (self.test_game_rapid_start_stop, 2),
+            (self.test_ble_during_everything, 2),
+            (self.test_achievement_during_game, 1),
+            (self.test_callsign_during_ble, 1),
+            (self.test_concurrent_timers, 3),
+            (self.test_rapid_bling_mode_switch, 1),
+            (self.test_wifi_scan_during_bling, 1),
+            (self.test_everything_at_once, 2),
         ]:
             weighted.extend([fn] * w)
 
@@ -412,6 +590,11 @@ class SoakTest:
                 if cycle % 20 == 0:
                     self.log('STRESS', 'Stress test 20 cycles')
                     self.cmd('test.stress 20', timeout=30)
+
+                # Every 30 cycles, run a screensaver interrupt test
+                if cycle % 30 == 0:
+                    self.log('CONFLICT', f'Screensaver interrupt test at cycle {cycle}')
+                    self.test_screensaver_interrupt()
 
                 # Reset to known state
                 self.cmd('nav.main')
