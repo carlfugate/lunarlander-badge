@@ -2,6 +2,7 @@
 """Badge Test MCP Server — bridges serial to AI tools for hardware testing.
 
 Backportable to any ESP32/LVGL badge with the SerialCmd firmware module.
+Uses BSTP v1.0 dot-notation protocol (module.command [args]).
 
 Usage:
     pip install mcp pyserial
@@ -80,18 +81,18 @@ async def list_tools():
     return [
         Tool(
             name="badge_send",
-            description="Send a raw serial command to the badge and return the response. Commands: heap, state, version, reboot, nav <screen>, tap <x> <y>, stress <n>, idle <ms>, back, help",
+            description="Send a BSTP command to the badge. Format: module.command [args]. Examples: sys.heap, nav.main, bling.set 3, ble.status, help",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "command": {"type": "string", "description": "Serial command to send"}
+                    "command": {"type": "string", "description": "BSTP command (module.command [args])"}
                 },
                 "required": ["command"]
             }
         ),
         Tool(
             name="badge_navigate",
-            description="Navigate to a screen and verify arrival. Screens: main, system, bling, callsign, achievements, crew, comms, game",
+            description="Navigate to a screen. Screens: main, system, bling, wifi, callsign, achievements, crew, comms, game, schedule, battery, buzzer, sd, info, ota, credits, card, screensaver, checkin",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -161,11 +162,11 @@ async def call_tool(name: str, arguments: dict):
         return [TextContent(type="text", text=result)]
 
     elif name == "badge_navigate":
-        result = serial_send(f"nav {arguments['screen']}")
+        result = serial_send(f"nav.{arguments['screen']}")
         return [TextContent(type="text", text=result)]
 
     elif name == "badge_heap":
-        result = serial_send("heap")
+        result = serial_send("sys.heap")
         return [TextContent(type="text", text=result)]
 
     elif name == "badge_monitor":
@@ -175,13 +176,13 @@ async def call_tool(name: str, arguments: dict):
 
     elif name == "badge_stress_test":
         cycles = arguments.get("cycles", 50)
-        result = serial_send(f"stress {cycles}")
+        result = serial_send(f"test.stress {cycles}")
         extra = serial_monitor(cycles * 200 + 5000)
         return [TextContent(type="text", text=f"{result}\n{extra}")]
 
     elif name == "badge_idle_test":
         duration = arguments.get("duration_ms", 60000)
-        result = serial_send(f"idle {duration}")
+        result = serial_send(f"test.idle {duration}")
         extra = serial_monitor(duration + 5000)
         return [TextContent(type="text", text=f"{result}\n{extra}")]
 
@@ -194,27 +195,27 @@ async def call_tool(name: str, arguments: dict):
 
         if test_name == "navigation_cycle":
             screens = ["system", "bling", "callsign", "achievements", "crew", "comms", "main"]
-            initial = serial_send("heap")
+            initial = serial_send("sys.heap")
             results.append(f"Initial: {initial}")
             for s in screens:
-                r = serial_send(f"nav {s}")
+                r = serial_send(f"nav.{s}")
                 results.append(r)
-            serial_send("nav main")
-            final = serial_send("heap")
+            serial_send("nav.main")
+            final = serial_send("sys.heap")
             results.append(f"Final: {final}")
 
         elif test_name == "screensaver_test":
-            results.append(serial_send("heap"))
+            results.append(serial_send("sys.heap"))
             results.append("Idling 65s for screensaver...")
             results.append(serial_monitor(66000))
-            results.append(serial_send("tap 160 120"))
-            results.append(serial_send("heap"))
+            results.append(serial_send("nav.main"))
+            results.append(serial_send("sys.heap"))
 
         elif test_name == "game_test":
-            results.append(serial_send("nav game"))
+            results.append(serial_send("nav.game"))
             results.append(serial_monitor(3000))
-            results.append(serial_send("back"))
-            results.append(serial_send("heap"))
+            results.append(serial_send("nav.main"))
+            results.append(serial_send("sys.heap"))
 
         elif test_name == "full_suite":
             for sub in ["navigation_cycle", "game_test"]:
