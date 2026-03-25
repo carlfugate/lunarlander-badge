@@ -15,7 +15,6 @@
 ScheduleEntry schedule[MAX_ENTRIES];
 int totalEntries = 0;
 
-// Add global to store last HTTP error for display
 int lastScheduleHttpCode = 0;
 String lastScheduleHttpError;
 
@@ -24,13 +23,11 @@ bool readScheduleFromSD(String &jsonString) {
         Serial.println("SD Card Mount Failed!");
         return false;
     }
-    
     File file = SD.open(SCHEDULE_FILE, "r");
     if (!file) {
         Serial.println("Failed to open schedule file on SD");
         return false;
     }
-    
     jsonString = file.readString();
     file.close();
     return true;
@@ -46,7 +43,6 @@ void saveScheduleToSD(const String &jsonString) {
     file.close();
 }
 
-// Helper function to read a file from SD
 String readFileFromSD(const char* path) {
     File file = SD.open(path, "r");
     if (!file) {
@@ -58,7 +54,6 @@ String readFileFromSD(const char* path) {
     return content;
 }
 
-// Helper function to write a file to SD
 void writeFileToSD(const char* path, const String& content) {
     File file = SD.open(path, "w");
     if (!file) {
@@ -69,7 +64,6 @@ void writeFileToSD(const char* path, const String& content) {
     file.close();
 }
 
-// Updated fetchScheduleFromAPI to use If-Modified-Since header
 void fetchScheduleFromAPI() {
     WiFiClientSecure client;
     client.setInsecure();
@@ -80,7 +74,6 @@ void fetchScheduleFromAPI() {
     lastScheduleHttpCode = 0;
     lastScheduleHttpError = "";
 
-    // Read last modified time from SD (or use default)
     String lastModifiedTime = readFileFromSD("/schedule_last_modified.txt");
     if (lastModifiedTime.isEmpty()) {
         lastModifiedTime = DEFAULT_LAST_MODIFIED;
@@ -116,7 +109,6 @@ void fetchScheduleFromAPI() {
     }
 }
 
-// Updated parseSchedule with constant for JSON size
 void parseSchedule(const String &jsonString) {
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, jsonString);
@@ -139,8 +131,7 @@ void parseSchedule(const String &jsonString) {
 
 void loadSchedule() {
     Serial.println("Checking for schedule updates...");
-    
-    fetchScheduleFromAPI();  // Ensure we always check for updates first
+    fetchScheduleFromAPI();
 
     String jsonString;
     if (readScheduleFromSD(jsonString)) {
@@ -150,18 +141,30 @@ void loadSchedule() {
     }
 }
 
-// Updated displaySchedule with list view
 void displaySchedule() {
     Serial.println("Displaying Schedule List View...");
-    static lv_obj_t *scheduleScreen = NULL;
-    if (scheduleScreen) {
-        lv_obj_del(scheduleScreen);
-        scheduleScreen = NULL;
-    }
-    scheduleScreen = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(scheduleScreen, lv_color_hex(0x0a0a0f), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(scheduleScreen, LV_OPA_COVER, 0);
-    load_screen_and_delete_old(scheduleScreen);
+
+    // HUD screen with title and accent line
+    lv_obj_t *scr = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
+    lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
+
+    lv_obj_t *hdr = lv_label_create(scr);
+    lv_label_set_text(hdr, "MISSION SCHEDULE");
+    lv_obj_set_style_text_color(hdr, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_text_font(hdr, &lv_font_unscii_8, 0);
+    lv_obj_align(hdr, LV_ALIGN_TOP_LEFT, 8, 8);
+
+    lv_obj_t *line = lv_obj_create(scr);
+    lv_obj_set_size(line, 312, 1);
+    lv_obj_set_pos(line, 4, 22);
+    lv_obj_set_style_bg_color(line, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_border_width(line, 0, 0);
+    lv_obj_set_style_radius(line, 0, 0);
+    lv_obj_set_style_pad_all(line, 0, 0);
+    lv_obj_clear_flag(line, LV_OBJ_FLAG_SCROLLABLE);
+
+    load_screen_and_delete_old(scr);
 
     if (totalEntries == 0) {
         String errMsg = "No schedule data found!\nCheck Wi-Fi, SD card, or API.";
@@ -172,49 +175,53 @@ void displaySchedule() {
                 errMsg += "\n" + lastScheduleHttpError;
             }
         }
-        lv_obj_t *errLabel = lv_label_create(scheduleScreen);
+        lv_obj_t *errLabel = lv_label_create(scr);
         lv_label_set_text(errLabel, errMsg.c_str());
-        lv_obj_set_style_text_color(errLabel, lv_color_hex(0xff4444), LV_PART_MAIN);
-        lv_obj_align(errLabel, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_set_style_text_color(errLabel, lv_color_hex(0xff4444), 0);
+        lv_obj_set_style_text_font(errLabel, &lv_font_unscii_8, 0);
+        lv_obj_align(errLabel, LV_ALIGN_TOP_LEFT, 8, 28);
     } else {
-        lv_obj_t *cont = lv_obj_create(scheduleScreen);
-        lv_obj_set_size(cont, 300, 220);
-        lv_obj_align(cont, LV_ALIGN_TOP_MID, 0, 0);
+        lv_obj_t *cont = lv_obj_create(scr);
+        lv_obj_set_size(cont, 304, 170);
+        lv_obj_set_pos(cont, 8, 26);
         lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_scroll_dir(cont, LV_DIR_VER);
-        lv_obj_set_style_pad_all(cont, 6, 0);
-        lv_obj_set_style_bg_color(cont, lv_color_hex(0x0a0a0f), LV_PART_MAIN);
+        lv_obj_set_style_pad_all(cont, 4, 0);
+        lv_obj_set_style_pad_row(cont, 4, 0);
+        lv_obj_set_style_bg_color(cont, lv_color_hex(0x0a0a0f), 0);
         lv_obj_set_style_border_width(cont, 0, 0);
 
         for (int i = 0; i < totalEntries; i++) {
             lv_obj_t *card = lv_obj_create(cont);
-            lv_obj_set_size(card, 270, LV_SIZE_CONTENT);
-            lv_obj_set_style_pad_all(card, 8, 0);
-            lv_obj_set_style_radius(card, 10, 0);
-            lv_obj_set_style_bg_color(card, lv_color_hex(0x222222), LV_PART_MAIN);
+            lv_obj_set_size(card, 290, LV_SIZE_CONTENT);
+            lv_obj_set_style_pad_all(card, 6, 0);
+            lv_obj_set_style_radius(card, 4, 0);
+            lv_obj_set_style_bg_color(card, lv_color_hex(0x1a1a2e), 0);
+            lv_obj_set_style_border_color(card, lv_color_hex(0x00e5ff), 0);
+            lv_obj_set_style_border_width(card, 1, 0);
+            lv_obj_set_style_border_side(card, LV_BORDER_SIDE_LEFT, 0);
             lv_obj_set_style_shadow_width(card, 0, 0);
-            lv_obj_set_style_border_width(card, 0, 0);
-            lv_obj_set_style_margin_bottom(card, 8, 0);
+            lv_obj_set_style_margin_bottom(card, 4, 0);
 
-            char buf[256];
-            snprintf(buf, sizeof(buf), "%s | %s\n%s\n%s", schedule[i].time.c_str(), schedule[i].room.c_str(), schedule[i].title.c_str(), schedule[i].speaker.c_str());
-            lv_obj_t *label = lv_label_create(card);
-            lv_label_set_text(label, buf);
-            lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
-            lv_obj_set_width(label, 250);
-            lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), LV_PART_MAIN);
-            lv_obj_align(label, LV_ALIGN_TOP_LEFT, 0, 0);
+            // Time/room header
+            lv_obj_t *time_lbl = lv_label_create(card);
+            char tbuf[64];
+            snprintf(tbuf, sizeof(tbuf), "%s | %s", schedule[i].time.c_str(), schedule[i].room.c_str());
+            lv_label_set_text(time_lbl, tbuf);
+            lv_obj_set_style_text_color(time_lbl, lv_color_hex(0x00e5ff), 0);
+            lv_obj_set_style_text_font(time_lbl, &lv_font_unscii_8, 0);
+
+            // Title + speaker
+            lv_obj_t *info_lbl = lv_label_create(card);
+            char ibuf[192];
+            snprintf(ibuf, sizeof(ibuf), "%s\n%s", schedule[i].title.c_str(), schedule[i].speaker.c_str());
+            lv_label_set_text(info_lbl, ibuf);
+            lv_label_set_long_mode(info_lbl, LV_LABEL_LONG_WRAP);
+            lv_obj_set_width(info_lbl, 270);
+            lv_obj_set_style_text_color(info_lbl, lv_color_hex(0xcccccc), 0);
         }
     }
 
-    // Themed back button
-    lv_obj_t *backButton = lv_btn_create(scheduleScreen);
-    lv_obj_set_size(backButton, 80, 28);
-    lv_obj_align(backButton, LV_ALIGN_BOTTOM_MID, 0, -8);
-    lv_obj_set_style_bg_color(backButton, lv_color_hex(0x222222), LV_PART_MAIN);
-    lv_obj_t *backLabel = lv_label_create(backButton);
-    lv_label_set_text(backLabel, LV_SYMBOL_LEFT " BACK");
-    lv_obj_set_style_text_color(backLabel, lv_color_hex(0x888888), LV_PART_MAIN);
-    lv_obj_center(backLabel);
-    lv_obj_add_event_cb(backButton, [](lv_event_t * e) { create_main_menu(false); }, LV_EVENT_CLICKED, NULL);
+    // Back button
+    create_back_button(scr, [](lv_event_t * e) { create_main_menu(false); });
 }
