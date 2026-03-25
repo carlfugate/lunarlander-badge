@@ -15,7 +15,7 @@
 
 void create_checkin_window();
 void create_credits_window();
-static void create_system_submenu();
+void create_system_submenu();
 
 // Konami code easter egg: ↑↑↓↓←→←→ via touch screen edges
 static const int konami_seq[] = {0,0,1,1,2,3,2,3}; // 0=up,1=down,2=left,3=right
@@ -51,7 +51,6 @@ extern bool max17048_available;  // Defined in main.cpp
 // Global variables (definitions)
 lv_timer_t * ota_timer = nullptr;
 lv_obj_t * main_menu       = nullptr;
-lv_obj_t * NeoWindow       = nullptr;
 lv_obj_t * BuzzerWindow    = nullptr;
 lv_obj_t * BatteryWindow   = nullptr;
 lv_obj_t * SDCardWindow    = nullptr;
@@ -350,52 +349,6 @@ void create_buzzer_window() {
 }
 
 //----------------------------------------------------
-// Event handler for NeoPixel button presses
-//----------------------------------------------------
-void neopixel_event_handler(lv_event_t * e) {
-    lv_obj_t * btn = (lv_obj_t *)lv_event_get_target(e);
-    const char * label = lv_label_get_text(lv_obj_get_child(btn, 0));
-
-    if(strcmp(label, "Red") == 0) {
-        for (int i = 0; i < NUM_NEOPIXELS; i++) {
-            setNeoPixelColor(i, Adafruit_NeoPixel::Color(255, 0, 0));
-        }
-    } else if(strcmp(label, "Green") == 0) {
-        for (int i = 0; i < NUM_NEOPIXELS; i++) {
-            setNeoPixelColor(i, Adafruit_NeoPixel::Color(0, 255, 0));
-        }
-    } else if(strcmp(label, "Blue") == 0) {
-        for (int i = 0; i < NUM_NEOPIXELS; i++) {
-            setNeoPixelColor(i, Adafruit_NeoPixel::Color(0, 0, 255));
-        }
-    } else if(strcmp(label, "Off") == 0) {
-        for (int i = 0; i < NUM_NEOPIXELS; i++) {
-            clearNeoPixels();
-        }
-    }
-}
-
-//----------------------------------------------------
-// Create NeoPixel Window
-//----------------------------------------------------
-void create_neo_window(void) {
-    NeoWindow = create_basic_window();
-    load_screen_and_delete_old(NeoWindow);
-
-    const String buttons[] = {"Red", "Green", "Blue", "Off"};
-    for (String name : buttons) {
-        lv_obj_t * btn = lv_btn_create(NeoWindow);
-        lv_obj_set_size(btn, 120, 50);
-        lv_obj_add_event_cb(btn, neopixel_event_handler, LV_EVENT_CLICKED, NULL);
-        lv_obj_t * label = lv_label_create(btn);
-        lv_label_set_text(label, name.c_str());
-        lv_obj_center(label);
-    }
-
-    create_back_button(NeoWindow, back_to_system_cb);
-}
-
-//----------------------------------------------------
 //----------------------------------------------------
 void create_sd_card_window() {
     SDCardWindow = create_basic_window();
@@ -422,19 +375,21 @@ void create_sd_card_window() {
         return;
     }
 
+    int file_y = 10;
     File file = root.openNextFile();
     while (file) {
         char buf[100];
         if (file.isDirectory()) {
-            snprintf(buf, sizeof(buf), "DIR: %s", file.name());
+            snprintf(buf, sizeof(buf), "[D] %s", file.name());
         } else {
-            snprintf(buf, sizeof(buf), "FILE: %s (%d bytes)", file.name(), file.size());
+            snprintf(buf, sizeof(buf), "    %s (%d bytes)", file.name(), file.size());
         }
 
         lv_obj_t * label = lv_label_create(SDCardWindow);
         lv_label_set_text(label, buf);
         lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), LV_PART_MAIN);
-        lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_align(label, LV_ALIGN_TOP_LEFT, 10, file_y);
+        file_y += 16;
 
         file = root.openNextFile();
     }
@@ -642,46 +597,6 @@ void create_system_info_window() {
     lv_obj_align(label, LV_ALIGN_TOP_LEFT, 10, 10); // Align to top-left for better readability
 
     create_back_button(SystemWindow, back_to_system_cb);
-}
-
-//----------------------------------------------------
-// Button event handler for the main menu
-//----------------------------------------------------
-void button_event_handler(lv_event_t * e) {
-    lv_obj_t * btn = (lv_obj_t *)lv_event_get_target(e);
-    const char * label = lv_label_get_text(lv_obj_get_child(btn, 0));
-
-    if (strcmp(label, "RGBs") == 0) {
-        create_neo_window();
-    } else if (strcmp(label, "LEDs") == 0) {
-        ledStatus = !ledStatus;
-        for (int i = 0; i < numLeds; i++) {
-            digitalWrite(ledPins[i], ledStatus);
-        }
-    } else if (strcmp(label, "Buzzer") == 0) {
-        create_buzzer_window();
-    } else if (strcmp(label, "OTA") == 0) {
-        create_ota_window();
-    } else if (strcmp(label, "Battery") == 0) {
-        create_battery_window();
-    } else if (strcmp(label, "Wifi") == 0) {
-        create_wifi_window();
-    } else if (strcmp(label, "SD Card") == 0) {
-        create_sd_card_window();
-    } else if (strcmp(label, "System") == 0) {
-        create_system_info_window();
-    } else if (strcmp(label, "Credits") == 0) {
-        create_credits_window();
-    } else if (strcmp(label, "Schedule") == 0) {
-        loadSchedule();    // Load from SD or API
-        displaySchedule(); // Show schedule using LVGL
-    } else if (strcmp(label, "Bling") == 0) {
-        create_bling_window();
-    } else if (strcmp(label, "Check-In") == 0) {
-        create_checkin_window();
-    } else if (strcmp(label, "Lander") == 0) {
-        lunar_lander_start();
-    }
 }
 
 // Comms chatter ticker message pool
@@ -991,7 +906,7 @@ void display_main_menu_buttons() {
 
 static void sys_btn_cb(lv_event_t *e) {
     const char *action = (const char *)lv_event_get_user_data(e);
-    if (strcmp(action, "rgbs") == 0) create_neo_window();
+    if (strcmp(action, "bling") == 0) create_bling_window();
     else if (strcmp(action, "leds") == 0) {
         ledStatus = !ledStatus;
         for (int i = 0; i < numLeds; i++) digitalWrite(ledPins[i], ledStatus);
@@ -1003,10 +918,11 @@ static void sys_btn_cb(lv_event_t *e) {
     else if (strcmp(action, "system") == 0) create_system_info_window();
 }
 
-static void create_system_submenu() {
+void create_system_submenu() {
     log_heap("enter create_system_submenu");
     lv_obj_t *scr = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
+    lv_obj_set_scroll_dir(scr, LV_DIR_VER);
     load_screen_and_delete_old(scr);
 
     // Header
@@ -1016,12 +932,12 @@ static void create_system_submenu() {
     lv_obj_align(hdr, LV_ALIGN_TOP_LEFT, 8, 6);
 
     // List items
-    static const char *labels[] = {"RGBs", "LEDs", "Buzzer", "SD Card", "Battery", "OTA Update", "System Info"};
-    static const char *actions[] = {"rgbs", "leds", "buzzer", "sd", "battery", "ota", "system"};
+    static const char *labels[] = {"Bling", "LEDs", "Buzzer", "SD Card", "Battery", "OTA Update", "System Info"};
+    static const char *actions[] = {"bling", "leds", "buzzer", "sd", "battery", "ota", "system"};
     for (int i = 0; i < 7; i++) {
         lv_obj_t *btn = lv_btn_create(scr);
-        lv_obj_set_size(btn, 304, 24);
-        lv_obj_set_pos(btn, 8, 28 + i * 26);
+        lv_obj_set_size(btn, 304, 22);
+        lv_obj_set_pos(btn, 8, 26 + i * 24);
         lv_obj_set_style_bg_color(btn, lv_color_hex(0x0a0a0f), 0);
         lv_obj_set_style_border_side(btn, LV_BORDER_SIDE_BOTTOM, 0);
         lv_obj_set_style_border_width(btn, 1, 0);
@@ -1041,8 +957,8 @@ static void create_system_submenu() {
 
     // Sound toggle button
     lv_obj_t *snd_btn = lv_btn_create(scr);
-    lv_obj_set_size(snd_btn, 100, 36);
-    lv_obj_set_pos(snd_btn, 8, 28 + 7 * 26);
+    lv_obj_set_size(snd_btn, 100, 28);
+    lv_obj_set_pos(snd_btn, 8, 26 + 7 * 24);
     lv_obj_set_style_bg_color(snd_btn, lv_color_hex(0x333333), 0);
     lv_obj_add_event_cb(snd_btn, [](lv_event_t *e) {
         audio_set_mute(!audio_is_muted());
@@ -1056,8 +972,8 @@ static void create_system_submenu() {
 
     // Callsign button
     lv_obj_t *cs_btn = lv_btn_create(scr);
-    lv_obj_set_size(cs_btn, 100, 36);
-    lv_obj_set_pos(cs_btn, 116, 28 + 7 * 26);
+    lv_obj_set_size(cs_btn, 100, 28);
+    lv_obj_set_pos(cs_btn, 116, 26 + 7 * 24);
     lv_obj_set_style_bg_color(cs_btn, lv_color_hex(0x333333), 0);
     lv_obj_add_event_cb(cs_btn, [](lv_event_t *e) { create_callsign_window(); }, LV_EVENT_CLICKED, NULL);
     lv_obj_t *cs_lbl = lv_label_create(cs_btn);

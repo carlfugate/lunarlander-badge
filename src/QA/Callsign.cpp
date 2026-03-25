@@ -34,7 +34,7 @@ void callsign_set(const char* name) {
 static void preset_cb(lv_event_t *e) {
     const char* name = (const char*)lv_event_get_user_data(e);
     callsign_set(name);
-    create_main_menu(false);
+    create_system_submenu();
 }
 
 void create_callsign_window() {
@@ -70,7 +70,7 @@ void create_callsign_window() {
     lv_obj_set_size(back, 80, 28);
     lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -8);
     lv_obj_set_style_bg_color(back, lv_color_hex(0x222222), 0);
-    lv_obj_add_event_cb(back, [](lv_event_t *e) { create_main_menu(false); }, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(back, [](lv_event_t *e) { create_system_submenu(); }, LV_EVENT_CLICKED, NULL);
     lv_obj_t *bl = lv_label_create(back);
     lv_label_set_text(bl, LV_SYMBOL_LEFT " BACK");
     lv_obj_set_style_text_color(bl, lv_color_hex(0x888888), 0);
