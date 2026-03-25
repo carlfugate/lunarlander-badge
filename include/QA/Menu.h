@@ -34,4 +34,5 @@ void create_wifi_scan_window();
 void create_system_info_window();
 void create_credits_window();
 void create_checkin_window();
+void create_badge_card_window();
 bool isVersionNewer(const String& online, const String& local);
