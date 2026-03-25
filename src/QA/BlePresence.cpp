@@ -35,6 +35,9 @@ static const char* preset_messages[] = {
     "See you at the bar",        // 12
 };
 
+static char s_last_notification[64] = "";
+static bool s_has_notification = false;
+
 static uint8_t s_msg_id = 0;
 static uint32_t s_msg_send_ms = 0;
 static uint32_t s_last_send_ms = 0;
@@ -129,6 +132,9 @@ static void process_result(BLEAdvertisedDevice &dev) {
             if (s_crew[idx].last_msg_id != msg_id || now - s_crew[idx].last_msg_ms > 10000) {
                 s_crew[idx].last_msg_id = msg_id;
                 s_crew[idx].last_msg_ms = now;
+                snprintf(s_last_notification, sizeof(s_last_notification),
+                    "%s: %s", callsign, preset_messages[msg_id]);
+                s_has_notification = true;
                 // Purple pulse for incoming message
                 for (int i = 0; i < NUM_NEOPIXELS; i++)
                     setNeoPixelColor(i, Adafruit_NeoPixel::Color(60, 0, 80));
@@ -220,6 +226,10 @@ const char* ble_presence_get_message_text(uint8_t msg_id) {
     if (msg_id > BLE_NUM_MESSAGES) return "";
     return preset_messages[msg_id];
 }
+
+bool ble_presence_has_notification() { return s_has_notification; }
+const char* ble_presence_get_notification() { return s_last_notification; }
+void ble_presence_clear_notification() { s_has_notification = false; }
 
 void create_comms_window() {
     lv_obj_t *scr = lv_obj_create(NULL);
@@ -365,5 +375,9 @@ void create_crew_log_window() {}
 void ble_presence_send_message(uint8_t) {}
 const char* ble_presence_get_message_text(uint8_t) { return ""; }
 void create_comms_window() {}
+
+bool ble_presence_has_notification() { return false; }
+const char* ble_presence_get_notification() { return ""; }
+void ble_presence_clear_notification() {}
 
 #endif

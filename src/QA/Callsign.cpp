@@ -65,12 +65,67 @@ void create_callsign_window() {
     lv_obj_set_style_text_color(current, lv_color_hex(0x00c853), 0);
     lv_obj_set_pos(current, 8, 26);
 
+    // Custom entry
+    lv_obj_t *ta = lv_textarea_create(scr);
+    lv_textarea_set_max_length(ta, MAX_CALLSIGN_LEN);
+    lv_textarea_set_one_line(ta, true);
+    lv_textarea_set_text(ta, s_callsign);
+    lv_obj_set_size(ta, 160, 30);
+    lv_obj_set_pos(ta, 4, 38);
+    lv_obj_set_style_bg_color(ta, lv_color_hex(0x1a1a2e), 0);
+    lv_obj_set_style_text_color(ta, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_border_color(ta, lv_color_hex(0x00e5ff), 0);
+
+    // Set button
+    lv_obj_t *set_btn = lv_btn_create(scr);
+    lv_obj_set_size(set_btn, 60, 30);
+    lv_obj_set_pos(set_btn, 168, 38);
+    lv_obj_set_style_bg_color(set_btn, lv_color_hex(0x00c853), 0);
+    lv_obj_add_event_cb(set_btn, [](lv_event_t *e) {
+        lv_obj_t *textarea = (lv_obj_t*)lv_event_get_user_data(e);
+        const char *text = lv_textarea_get_text(textarea);
+        if (text && text[0] != '\0') {
+            callsign_set(text);
+            create_callsign_window();
+        }
+    }, LV_EVENT_CLICKED, ta);
+    lv_obj_t *set_lbl = lv_label_create(set_btn);
+    lv_label_set_text(set_lbl, "SET");
+    lv_obj_set_style_text_color(set_lbl, lv_color_hex(0x000000), 0);
+    lv_obj_center(set_lbl);
+
+    // On-screen keyboard
+    lv_obj_t *kb = lv_keyboard_create(scr);
+    lv_keyboard_set_textarea(kb, ta);
+    lv_obj_set_size(kb, 320, 120);
+    lv_obj_align(kb, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_add_event_cb(ta, [](lv_event_t *e) {
+        lv_obj_t *keyboard = (lv_obj_t*)lv_event_get_user_data(e);
+        lv_obj_clear_flag(keyboard, LV_OBJ_FLAG_HIDDEN);
+    }, LV_EVENT_FOCUSED, kb);
+
+    lv_obj_add_event_cb(ta, [](lv_event_t *e) {
+        lv_obj_t *keyboard = (lv_obj_t*)lv_event_get_user_data(e);
+        lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN);
+    }, LV_EVENT_DEFOCUSED, kb);
+
+    lv_obj_add_event_cb(kb, [](lv_event_t *e) {
+        lv_keyboard_t *keyboard = (lv_keyboard_t*)lv_event_get_target(e);
+        lv_obj_add_flag((lv_obj_t*)keyboard, LV_OBJ_FLAG_HIDDEN);
+    }, LV_EVENT_READY, NULL);
+    lv_obj_add_event_cb(kb, [](lv_event_t *e) {
+        lv_keyboard_t *keyboard = (lv_keyboard_t*)lv_event_get_target(e);
+        lv_obj_add_flag((lv_obj_t*)keyboard, LV_OBJ_FLAG_HIDDEN);
+    }, LV_EVENT_CANCEL, NULL);
+
     for (int i = 0; i < NUM_PRESETS; i++) {
         lv_obj_t *btn = lv_btn_create(scr);
         lv_obj_set_size(btn, 96, 28);
         int col = i % 3;
         int row = i / 3;
-        lv_obj_set_pos(btn, 8 + col * 104, 44 + row * 34);
+        lv_obj_set_pos(btn, 8 + col * 104, 74 + row * 34);
         lv_obj_set_style_bg_color(btn, lv_color_hex(0x1a1a2e), 0);
         lv_obj_set_style_radius(btn, 6, 0);
         lv_obj_add_event_cb(btn, preset_cb, LV_EVENT_CLICKED, (void*)preset_callsigns[i]);

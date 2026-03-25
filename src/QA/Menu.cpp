@@ -812,10 +812,17 @@ void display_main_menu_buttons() {
 
         // Update data panel
         if (data_label) {
-            lv_label_set_text_fmt(data_label,
-                "CREW:%-8s | NEARBY:%d | PATCHES:%d/%d",
-                callsign_get(), ble_presence_nearby_count(),
-                achievements_total(), ACH_COUNT);
+            if (ble_presence_has_notification()) {
+                lv_label_set_text(data_label, ble_presence_get_notification());
+                lv_obj_set_style_text_color(data_label, lv_color_hex(0xd080ff), 0);
+                ble_presence_clear_notification();
+            } else {
+                lv_obj_set_style_text_color(data_label, lv_color_hex(0x00e5ff), 0);
+                lv_label_set_text_fmt(data_label,
+                    "CREW:%-8s | NEARBY:%d | PATCHES:%d/%d",
+                    callsign_get(), ble_presence_nearby_count(),
+                    achievements_total(), ACH_COUNT);
+            }
         }
     }, 1000, NULL);
 
