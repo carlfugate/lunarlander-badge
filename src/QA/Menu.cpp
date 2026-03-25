@@ -790,6 +790,21 @@ static void create_system_submenu() {
         lv_obj_align(arrow, LV_ALIGN_RIGHT_MID, -4, 0);
     }
 
+    // Sound toggle button
+    lv_obj_t *snd_btn = lv_btn_create(scr);
+    lv_obj_set_size(snd_btn, 100, 36);
+    lv_obj_set_pos(snd_btn, 8, 28 + 7 * 26);
+    lv_obj_set_style_bg_color(snd_btn, lv_color_hex(0x333333), 0);
+    lv_obj_add_event_cb(snd_btn, [](lv_event_t *e) {
+        audio_set_mute(!audio_is_muted());
+        lv_obj_t *lbl = lv_obj_get_child((lv_obj_t*)lv_event_get_target(e), 0);
+        lv_label_set_text(lbl, audio_is_muted() ? LV_SYMBOL_MUTE " MUTED" : LV_SYMBOL_AUDIO " SOUND");
+        audio_click();
+    }, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *snd_lbl = lv_label_create(snd_btn);
+    lv_label_set_text(snd_lbl, audio_is_muted() ? LV_SYMBOL_MUTE " MUTED" : LV_SYMBOL_AUDIO " SOUND");
+    lv_obj_center(snd_lbl);
+
     // Back button
     lv_obj_t *back = lv_btn_create(scr);
     lv_obj_set_size(back, 80, 28);
