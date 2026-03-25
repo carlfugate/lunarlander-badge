@@ -158,7 +158,7 @@ static void multiplayer_tick_cb(lv_timer_t *t) {
     if (!gs.lander.thrusting && was_thrusting) audio_thrust_stop();
     was_thrusting = gs.lander.thrusting;
     if (gs.lander.thrusting) leds_thrust();
-    else leds_idle();
+    leds_fuel_gauge(gs.lander.fuel, LN_INITIAL_FUEL);
 
     if (gs.phase == PHASE_PLAYING) {
         renderer_draw(gs);
@@ -278,7 +278,7 @@ static void game_tick_cb(lv_timer_t *t) {
     was_thrusting = gs.lander.thrusting;
 
     if (gs.lander.thrusting) leds_thrust();
-    else leds_idle();
+    leds_fuel_gauge(gs.lander.fuel, LN_INITIAL_FUEL);
 
     if (gs.phase == PHASE_PLAYING && gs.lander.fuel < 100.0f && gs.lander.fuel > 0.0f) {
         static uint32_t last_beep = 0;
