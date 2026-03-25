@@ -18,6 +18,11 @@ static int ss_total_ticks = 0;
 static int ss_scene_ticks = 0;
 static int ss_scene_idx = 0;
 
+static ScreensaverMode ss_mode = SS_MODE_AD_ASTRA;
+
+void screensaver_set_mode(ScreensaverMode mode) { ss_mode = mode; }
+ScreensaverMode screensaver_get_mode() { return ss_mode; }
+
 #define W 320
 #define H 240
 #define SCENE_DURATION 600  // 30s at 50ms/tick
@@ -370,20 +375,17 @@ static void scene_ripple(uint16_t *buf, int tick) {
     }
 }
 
-// --- Scene table ---
+// --- Scene table: Ad Astra story arc ---
 typedef void (*scene_fn)(uint16_t *buf, int tick);
-static const scene_fn scenes[] = {
-    scene_warp,      // 1. Traveling to the moon
-    scene_solar,     // 2. Passing through the solar system
-    scene_lunar,     // 3. Arrived — earthrise + orbiter
-    scene_descent,   // 4. The landing mission
-    scene_pulsar,    // 5. Deep space beacon
-    scene_matrix,    // 6. Hacking the signal
-    scene_terminal,  // 7. Systems coming online
-    scene_lava,      // 8. Ambient cool-down
-    scene_ripple,    // 9. Interactive starfield
+static const scene_fn story_scenes[] = {
+    scene_warp,      // Departing Earth
+    scene_solar,     // Passing through the solar system
+    scene_lunar,     // Arrived — earthrise + orbiter
+    scene_descent,   // The landing mission
+    scene_pulsar,    // Deep space beacon
+    scene_ripple,    // Interactive starfield
 };
-static const int NUM_SCENES = sizeof(scenes) / sizeof(scenes[0]);
+static const int NUM_STORY_SCENES = sizeof(story_scenes) / sizeof(story_scenes[0]);
 
 // --- Main tick ---
 static void ss_tick(lv_timer_t *t) {
@@ -398,18 +400,26 @@ static void ss_tick(lv_timer_t *t) {
 #endif
 
     uint16_t *buf = (uint16_t *)ss_buf;
-    scenes[ss_scene_idx](buf, ss_scene_ticks);
-    ss_scene_ticks++;
 
-    if (ss_scene_ticks >= SCENE_DURATION) {
-        ss_scene_ticks = 0;
-        ss_scene_idx = (ss_scene_idx + 1) % NUM_SCENES;
+    if (ss_mode == SS_MODE_AD_ASTRA) {
+        story_scenes[ss_scene_idx](buf, ss_scene_ticks);
+        ss_scene_ticks++;
+        if (ss_scene_ticks >= SCENE_DURATION) {
+            ss_scene_ticks = 0;
+            ss_scene_idx = (ss_scene_idx + 1) % NUM_STORY_SCENES;
+        }
+    } else if (ss_mode == SS_MODE_MATRIX) {
+        scene_matrix(buf, ss_scene_ticks++);
+    } else if (ss_mode == SS_MODE_TERMINAL) {
+        scene_terminal(buf, ss_scene_ticks++);
+    } else if (ss_mode == SS_MODE_LAVA) {
+        scene_lava(buf, ss_scene_ticks++);
     }
 }
 
 static void ss_touch_cb(lv_event_t *e) {
     // Ripple scene: create ripple on touch instead of waking
-    if (ss_scene_idx == 8) { // ripple scene
+    if (ss_mode == SS_MODE_AD_ASTRA && ss_scene_idx == NUM_STORY_SCENES - 1) {
         lv_point_t p;
         lv_indev_get_point(lv_indev_active(), &p);
         ripple_x = p.x; ripple_y = p.y; ripple_r = 1;

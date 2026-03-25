@@ -918,6 +918,39 @@ static void sys_btn_cb(lv_event_t *e) {
     else if (strcmp(action, "system") == 0) create_system_info_window();
 }
 
+static void create_screensaver_picker() {
+    lv_obj_t *scr = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
+    load_screen_and_delete_old(scr);
+
+    lv_obj_t *title = lv_label_create(scr);
+    lv_label_set_text(title, "SCREENSAVER");
+    lv_obj_set_style_text_color(title, lv_color_hex(0x00e5ff), 0);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 6);
+
+    static const char* names[] = {"Ad Astra", "Matrix", "Terminal", "Lava Lamp"};
+    for (int i = 0; i < SS_MODE_COUNT; i++) {
+        lv_obj_t *btn = lv_btn_create(scr);
+        lv_obj_set_size(btn, 200, 32);
+        lv_obj_align(btn, LV_ALIGN_TOP_MID, 0, 30 + i * 40);
+        bool active = (screensaver_get_mode() == (ScreensaverMode)i);
+        lv_obj_set_style_bg_color(btn, active ? lv_color_hex(0x1a3a1a) : lv_color_hex(0x1a1a2e), 0);
+        lv_obj_set_style_border_color(btn, active ? lv_color_hex(0x00c853) : lv_color_hex(0x333333), 0);
+        lv_obj_set_style_border_width(btn, active ? 2 : 1, 0);
+        lv_obj_add_event_cb(btn, [](lv_event_t *e) {
+            int mode = (int)(intptr_t)lv_event_get_user_data(e);
+            screensaver_set_mode((ScreensaverMode)mode);
+            create_screensaver_picker();
+        }, LV_EVENT_CLICKED, (void*)(intptr_t)i);
+        lv_obj_t *lbl = lv_label_create(btn);
+        lv_label_set_text(lbl, names[i]);
+        lv_obj_set_style_text_color(lbl, active ? lv_color_hex(0x00c853) : lv_color_hex(0xcccccc), 0);
+        lv_obj_center(lbl);
+    }
+
+    create_back_button(scr, [](lv_event_t *e) { create_system_submenu(); });
+}
+
 void create_system_submenu() {
     log_heap("enter create_system_submenu");
     lv_obj_t *scr = lv_obj_create(NULL);
@@ -979,6 +1012,17 @@ void create_system_submenu() {
     lv_obj_t *cs_lbl = lv_label_create(cs_btn);
     lv_label_set_text(cs_lbl, LV_SYMBOL_EDIT " CALL");
     lv_obj_center(cs_lbl);
+
+    // Screensaver button
+    lv_obj_t *ss_btn = lv_btn_create(scr);
+    lv_obj_set_size(ss_btn, 100, 28);
+    lv_obj_set_pos(ss_btn, 224, 26 + 7 * 24);
+    lv_obj_set_style_bg_color(ss_btn, lv_color_hex(0x333333), 0);
+    lv_obj_add_event_cb(ss_btn, [](lv_event_t *e) { create_screensaver_picker(); }, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *ss_lbl = lv_label_create(ss_btn);
+    lv_label_set_text(ss_lbl, LV_SYMBOL_IMAGE " Screen");
+    lv_obj_set_style_text_color(ss_lbl, lv_color_hex(0xcccccc), 0);
+    lv_obj_center(ss_lbl);
 
     // Back button
     lv_obj_t *back = lv_btn_create(scr);
