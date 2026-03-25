@@ -58,6 +58,10 @@ int achievements_total() { return s_total; }
 int achievements_games_played() { return s_games_played; }
 
 void achievements_increment_games() {
+    s_games_played++;
+    achievements_save();
+    if (s_games_played >= 10) achievement_unlock(ACH_MARATHON);
+}
 
 void create_achievements_window() {
     lv_obj_t *scr = lv_obj_create(NULL);
@@ -121,3 +125,8 @@ void achievement_unlock(uint8_t id) {
 int achievements_total() { return s_total; }
 int achievements_games_played() { return s_games_played; }
 void achievements_increment_games() {
+    s_games_played++;
+    if (s_games_played >= 10) achievement_unlock(ACH_MARATHON);
+}
+
+#endif

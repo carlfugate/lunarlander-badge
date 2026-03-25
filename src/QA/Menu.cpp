@@ -723,58 +723,66 @@ void create_badge_card_window() {
 }
 
 //----------------------------------------------------
-// Display Main Menu Buttons
+// Display Main Menu Buttons — Concept C: Mission Control HUD
 //----------------------------------------------------
 void display_main_menu_buttons() {
-    stop_menu_timers();  // clean up timers from previous menu instance
+    stop_menu_timers();
 
-    // Disable flex — use absolute positioning
     lv_obj_remove_style_all(main_menu);
     lv_obj_set_style_bg_color(main_menu, lv_color_hex(0x0a0a0f), 0);
     lv_obj_set_style_bg_opa(main_menu, LV_OPA_COVER, 0);
     lv_obj_clear_flag(main_menu, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_pad_all(main_menu, 0, 0);
 
-    // Header bar with cyan accent line
+    // === Top bar (y=0-22) ===
     lv_obj_t *hdr = lv_obj_create(main_menu);
-    lv_obj_set_size(hdr, 320, 26);
+    lv_obj_set_size(hdr, 320, 22);
     lv_obj_set_pos(hdr, 0, 0);
     lv_obj_set_style_bg_color(hdr, lv_color_hex(0x0a0a0f), 0);
-    lv_obj_set_style_border_side(hdr, LV_BORDER_SIDE_BOTTOM, 0);
-    lv_obj_set_style_border_width(hdr, 1, 0);
-    lv_obj_set_style_border_color(hdr, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_border_width(hdr, 0, 0);
     lv_obj_set_style_radius(hdr, 0, 0);
     lv_obj_set_style_pad_all(hdr, 0, 0);
     lv_obj_clear_flag(hdr, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t *brand = lv_label_create(hdr);
     lv_label_set_text(brand, "BSidesKC '26");
+    lv_obj_set_style_text_font(brand, &lv_font_unscii_8, 0);
     lv_obj_set_style_text_color(brand, lv_color_hex(0x00e5ff), 0);
-    lv_obj_align(brand, LV_ALIGN_LEFT_MID, 8, 0);
+    lv_obj_align(brand, LV_ALIGN_LEFT_MID, 4, 0);
 
-    // Battery or USB indicator
     lv_obj_t *batt = lv_label_create(hdr);
     if (max17048_available) {
         float pct = max17048.cellPercent();
         if (pct > 100) pct = 100;
-        lv_label_set_text_fmt(batt, LV_SYMBOL_BATTERY_FULL " %d%%", (int)pct);
+        lv_label_set_text_fmt(batt, LV_SYMBOL_WIFI " " LV_SYMBOL_BATTERY_FULL " %d%%", (int)pct);
     } else {
-        lv_label_set_text(batt, LV_SYMBOL_USB " USB");
+        lv_label_set_text(batt, LV_SYMBOL_WIFI " " LV_SYMBOL_USB);
     }
-    lv_obj_set_style_text_color(batt, lv_color_hex(0x888888), 0);
-    lv_obj_align(batt, LV_ALIGN_RIGHT_MID, -8, 0);
+    lv_obj_set_style_text_color(batt, lv_color_hex(0x555555), 0);
+    lv_obj_align(batt, LV_ALIGN_RIGHT_MID, -4, 0);
 
-    // MET clock
     static lv_obj_t *met_label = NULL;
+    static lv_obj_t *data_label = NULL;
     met_label = lv_label_create(hdr);
+    lv_obj_set_style_text_font(met_label, &lv_font_unscii_8, 0);
     lv_obj_set_style_text_color(met_label, lv_color_hex(0x00e5ff), 0);
-    lv_obj_set_style_text_font(met_label, &lv_font_montserrat_14, 0);
     lv_obj_align(met_label, LV_ALIGN_CENTER, 0, 0);
     lv_label_set_text(met_label, "MET 00:00:00");
 
+    // Cyan accent line at y=23
+    lv_obj_t *accent = lv_obj_create(main_menu);
+    lv_obj_set_size(accent, 320, 1);
+    lv_obj_set_pos(accent, 0, 23);
+    lv_obj_set_style_bg_color(accent, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_border_width(accent, 0, 0);
+    lv_obj_set_style_radius(accent, 0, 0);
+    lv_obj_set_style_pad_all(accent, 0, 0);
+    lv_obj_clear_flag(accent, LV_OBJ_FLAG_SCROLLABLE);
+
+    // === MET timer ===
     if (met_timer) lv_timer_del(met_timer);
     met_timer = lv_timer_create([](lv_timer_t *t) {
-        if (lv_scr_act() != main_menu) return; // screen changed, skip
+        if (lv_scr_act() != main_menu) return;
         uint32_t elapsed = (millis() - badge_boot_ms) / 1000;
         uint32_t h = elapsed / 3600;
         uint32_t m = (elapsed % 3600) / 60;
@@ -782,15 +790,13 @@ void display_main_menu_buttons() {
 
         reminder_check(elapsed);
 
-        // Easter egg: 42 (4h 2m 0s = 14520s)
         static bool answer_shown = false;
         if (elapsed == 14520 && !answer_shown) {
             answer_shown = true;
             lv_label_set_text(met_label, "The answer is 42");
             for (int i = 0; i < NUM_NEOPIXELS; i++) setNeoPixelColor(i, 0xFFFFFF);
         } else if (answer_shown && elapsed > 14520 && elapsed <= 14525) {
-            // Hold easter egg text for 5 seconds
-        } else if (elapsed > 28800) { // 8 hours = party time
+        } else if (elapsed > 28800) {
             static uint8_t party_hue = 0;
             party_hue += 3;
             lv_obj_set_style_text_color(met_label,
@@ -802,84 +808,101 @@ void display_main_menu_buttons() {
                 h, m, s,
                 (WiFi.status() == WL_CONNECTED) ? LV_SYMBOL_WIFI : "");
         }
+
+        // Update data panel
+        if (data_label) {
+            lv_label_set_text_fmt(data_label,
+                "CREW: %-8s | GAMES: %d | PATCHES: %d/%d",
+                callsign_get(), achievements_games_played(),
+                achievements_total(), ACH_COUNT);
+        }
     }, 1000, NULL);
 
-    // Featured buttons: Lander + Schedule side by side
+    // === Left column: two large stacked buttons (y=26) ===
     lv_obj_t *lander_btn = lv_btn_create(main_menu);
-    lv_obj_set_size(lander_btn, 148, 48);
-    lv_obj_set_pos(lander_btn, 8, 32);
+    lv_obj_set_size(lander_btn, 190, 74);
+    lv_obj_set_pos(lander_btn, 4, 26);
     lv_obj_set_style_bg_color(lander_btn, lv_color_hex(0x2e7d32), 0);
     lv_obj_set_style_bg_grad_color(lander_btn, lv_color_hex(0x00c853), 0);
     lv_obj_set_style_bg_grad_dir(lander_btn, LV_GRAD_DIR_VER, 0);
-    lv_obj_set_style_radius(lander_btn, 10, 0);
-    lv_obj_set_style_shadow_width(lander_btn, 8, 0);
-    lv_obj_set_style_shadow_color(lander_btn, lv_color_hex(0x00c853), 0);
-    lv_obj_set_style_shadow_opa(lander_btn, LV_OPA_30, 0);
+    lv_obj_set_style_radius(lander_btn, 8, 0);
     lv_obj_add_event_cb(lander_btn, [](lv_event_t *e) { lunar_lander_start(); }, LV_EVENT_CLICKED, NULL);
     lv_obj_t *ll = lv_label_create(lander_btn);
     lv_label_set_text(ll, LV_SYMBOL_PLAY " LANDER");
+    lv_obj_set_style_text_font(ll, &lv_font_montserrat_20, 0);
     lv_obj_center(ll);
 
     lv_obj_t *sched_btn = lv_btn_create(main_menu);
-    lv_obj_set_size(sched_btn, 148, 48);
-    lv_obj_set_pos(sched_btn, 164, 32);
+    lv_obj_set_size(sched_btn, 190, 74);
+    lv_obj_set_pos(sched_btn, 4, 104);
     lv_obj_set_style_bg_color(sched_btn, lv_color_hex(0x0277bd), 0);
     lv_obj_set_style_bg_grad_color(sched_btn, lv_color_hex(0x00e5ff), 0);
     lv_obj_set_style_bg_grad_dir(sched_btn, LV_GRAD_DIR_VER, 0);
-    lv_obj_set_style_radius(sched_btn, 10, 0);
-    lv_obj_set_style_shadow_width(sched_btn, 8, 0);
-    lv_obj_set_style_shadow_color(sched_btn, lv_color_hex(0x00e5ff), 0);
-    lv_obj_set_style_shadow_opa(sched_btn, LV_OPA_30, 0);
+    lv_obj_set_style_radius(sched_btn, 8, 0);
     lv_obj_add_event_cb(sched_btn, [](lv_event_t *e) {
         loadSchedule();
         displaySchedule();
     }, LV_EVENT_CLICKED, NULL);
     lv_obj_t *sl = lv_label_create(sched_btn);
     lv_label_set_text(sl, LV_SYMBOL_LIST " SCHEDULE");
+    lv_obj_set_style_text_font(sl, &lv_font_montserrat_20, 0);
     lv_obj_center(sl);
 
-    // Secondary buttons: 3x2 grid
-    struct { const char *label; lv_color_t bg; lv_color_t grad; lv_event_cb_t cb; } items[] = {
-        {LV_SYMBOL_OK " My Card", lv_color_hex(0x4e54c8), lv_color_hex(0x8f94fb), [](lv_event_t *e) { create_badge_card_window(); }},
-        {LV_SYMBOL_TINT " Bling",   lv_color_hex(0x614385), lv_color_hex(0x516395), [](lv_event_t *e) { create_bling_window(); }},
-        {LV_SYMBOL_WIFI " WiFi",    lv_color_hex(0x11998e), lv_color_hex(0x38ef7d), [](lv_event_t *e) { create_wifi_window(); }},
-        {LV_SYMBOL_FILE " Credits", lv_color_hex(0xf7971e), lv_color_hex(0xffe259), [](lv_event_t *e) { create_credits_window(); }},
-        {LV_SYMBOL_EYE_OPEN " Badges", lv_color_hex(0xff512f), lv_color_hex(0xdd2476), [](lv_event_t *e) { create_achievements_window(); }},
-        {LV_SYMBOL_SETTINGS,         lv_color_hex(0x333333), lv_color_hex(0x555555), [](lv_event_t *e) { create_system_submenu(); }},
+    // === Right column: 2x3 icon grid ===
+    struct { const char *icon; const char *name; lv_event_cb_t cb; } grid[] = {
+        {LV_SYMBOL_TINT,     "Bling",    [](lv_event_t *e) { create_bling_window(); }},
+        {LV_SYMBOL_WIFI,     "WiFi",     [](lv_event_t *e) { create_wifi_window(); }},
+        {LV_SYMBOL_OK,       "Badges",   [](lv_event_t *e) { create_achievements_window(); }},
+        {LV_SYMBOL_FILE,     "Credits",  [](lv_event_t *e) { create_credits_window(); }},
+        {LV_SYMBOL_SETTINGS, "Settings", [](lv_event_t *e) { create_system_submenu(); }},
+        {LV_SYMBOL_EYE_OPEN, "My Card",  [](lv_event_t *e) { create_badge_card_window(); }},
     };
     for (int i = 0; i < 6; i++) {
+        int col = i % 2, row = i / 2;
         lv_obj_t *btn = lv_btn_create(main_menu);
-        int col = i % 3;
-        int row = i / 3;
-        lv_obj_set_size(btn, 98, 38);
-        lv_obj_set_pos(btn, 8 + col * 104, 88 + row * 44);
-        lv_obj_set_style_bg_color(btn, items[i].bg, 0);
-        lv_obj_set_style_bg_grad_color(btn, items[i].grad, 0);
-        lv_obj_set_style_bg_grad_dir(btn, LV_GRAD_DIR_VER, 0);
-        lv_obj_set_style_radius(btn, 8, 0);
-        if (items[i].cb) {
-            lv_obj_add_event_cb(btn, items[i].cb, LV_EVENT_CLICKED, NULL);
-        } else {
-            lv_obj_add_state(btn, LV_STATE_DISABLED);
-            lv_obj_set_style_opa(btn, LV_OPA_50, LV_STATE_DISABLED);
-        }
-        lv_obj_t *lbl = lv_label_create(btn);
-        lv_label_set_text(lbl, items[i].label);
-        lv_obj_center(lbl);
-        // Dark text for yellow Credits button
-        if (i == 3) lv_obj_set_style_text_color(lbl, lv_color_hex(0x333333), 0);
+        lv_obj_set_size(btn, 54, 46);
+        lv_obj_set_pos(btn, 200 + col * 60, 26 + row * 54);
+        lv_obj_set_style_bg_color(btn, lv_color_hex(0x1a1a2e), 0);
+        lv_obj_set_style_radius(btn, 6, 0);
+        lv_obj_set_style_pad_all(btn, 0, 0);
+        lv_obj_add_event_cb(btn, grid[i].cb, LV_EVENT_CLICKED, NULL);
+
+        lv_obj_t *ic = lv_label_create(btn);
+        lv_label_set_text(ic, grid[i].icon);
+        lv_obj_set_style_text_color(ic, lv_color_hex(0x00e5ff), 0);
+        lv_obj_align(ic, LV_ALIGN_TOP_MID, 0, 4);
+
+        lv_obj_t *nm = lv_label_create(btn);
+        lv_label_set_text(nm, grid[i].name);
+        lv_obj_set_style_text_font(nm, &lv_font_unscii_8, 0);
+        lv_obj_set_style_text_color(nm, lv_color_hex(0x888888), 0);
+        lv_obj_align(nm, LV_ALIGN_BOTTOM_MID, 0, -2);
     }
 
-    // Mission control label
-    lv_obj_t *mc_label = lv_label_create(main_menu);
-    lv_label_set_text(mc_label, LV_SYMBOL_GPS " MISSION CONTROL");
-    lv_obj_set_style_text_color(mc_label, lv_color_hex(0x444455), 0);
-    lv_obj_set_pos(mc_label, 8, 168);
+    // === Data panel (y=188) ===
+    lv_obj_t *data_bg = lv_obj_create(main_menu);
+    lv_obj_set_size(data_bg, 312, 20);
+    lv_obj_set_pos(data_bg, 4, 188);
+    lv_obj_set_style_bg_color(data_bg, lv_color_hex(0x111118), 0);
+    lv_obj_set_style_border_width(data_bg, 1, 0);
+    lv_obj_set_style_border_color(data_bg, lv_color_hex(0x222233), 0);
+    lv_obj_set_style_radius(data_bg, 4, 0);
+    lv_obj_set_style_pad_all(data_bg, 0, 0);
+    lv_obj_clear_flag(data_bg, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Mission control ticker
+    data_label = lv_label_create(data_bg);
+    lv_obj_set_style_text_font(data_label, &lv_font_unscii_8, 0);
+    lv_obj_set_style_text_color(data_label, lv_color_hex(0x00e5ff), 0);
+    lv_label_set_text_fmt(data_label,
+        "CREW: %-8s | GAMES: %d | PATCHES: %d/%d",
+        callsign_get(), achievements_games_played(),
+        achievements_total(), ACH_COUNT);
+    lv_obj_align(data_label, LV_ALIGN_LEFT_MID, 4, 0);
+
+    // === Ticker (y=212) ===
     lv_obj_t *ticker_bg = lv_obj_create(main_menu);
-    lv_obj_set_size(ticker_bg, 304, 22);
-    lv_obj_set_pos(ticker_bg, 8, 180);
+    lv_obj_set_size(ticker_bg, 312, 22);
+    lv_obj_set_pos(ticker_bg, 4, 212);
     lv_obj_set_style_bg_color(ticker_bg, lv_color_hex(0x111118), 0);
     lv_obj_set_style_border_width(ticker_bg, 1, 0);
     lv_obj_set_style_border_color(ticker_bg, lv_color_hex(0x222233), 0);
@@ -889,19 +912,14 @@ void display_main_menu_buttons() {
 
     lv_obj_t *ticker = lv_label_create(ticker_bg);
     lv_label_set_long_mode(ticker, LV_LABEL_LONG_SCROLL_CIRCULAR);
-    lv_obj_set_width(ticker, 290);
+    lv_obj_set_width(ticker, 298);
     static char ticker_buf[512];
     build_ticker_text(ticker_buf, sizeof(ticker_buf));
     lv_label_set_text(ticker, ticker_buf);
+    lv_obj_set_style_text_font(ticker, &lv_font_unscii_8, 0);
     lv_obj_set_style_text_color(ticker, lv_color_hex(0x00e5ff), 0);
-    lv_obj_set_style_anim_duration(ticker, 30000, 0); // 30s full scroll
+    lv_obj_set_style_anim_duration(ticker, 30000, 0);
     lv_obj_align(ticker, LV_ALIGN_LEFT_MID, 4, 0);
-
-    // Version in bottom-right corner
-    lv_obj_t *ver = lv_label_create(main_menu);
-    lv_label_set_text(ver, "v" BADGE_VERSION);
-    lv_obj_set_style_text_color(ver, lv_color_hex(0x333333), 0);
-    lv_obj_align(ver, LV_ALIGN_BOTTOM_RIGHT, -8, -4);
 
     // Konami code touch detector
     lv_obj_add_flag(main_menu, LV_OBJ_FLAG_CLICKABLE);

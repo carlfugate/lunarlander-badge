@@ -18,6 +18,7 @@ void achievements_save();
 bool achievement_unlocked(uint8_t id);
 void achievement_unlock(uint8_t id);
 int achievements_total();
+int achievements_games_played();
 void achievements_increment_games();
 
 #ifndef NATIVE_TEST
