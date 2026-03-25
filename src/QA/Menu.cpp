@@ -142,6 +142,27 @@ lv_obj_t* create_basic_window() {
     return win;
 }
 
+// HUD-themed screen: dark bg, cyan title, accent line
+static lv_obj_t* create_hud_screen(const char *title) {
+    lv_obj_t *scr = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
+    load_screen_and_delete_old(scr);
+    lv_obj_t *hdr = lv_label_create(scr);
+    lv_label_set_text(hdr, title);
+    lv_obj_set_style_text_color(hdr, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_text_font(hdr, &lv_font_unscii_8, 0);
+    lv_obj_align(hdr, LV_ALIGN_TOP_LEFT, 8, 6);
+    lv_obj_t *line = lv_obj_create(scr);
+    lv_obj_set_size(line, 312, 1);
+    lv_obj_set_pos(line, 4, 22);
+    lv_obj_set_style_bg_color(line, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_border_width(line, 0, 0);
+    lv_obj_set_style_radius(line, 0, 0);
+    lv_obj_set_style_pad_all(line, 0, 0);
+    lv_obj_clear_flag(line, LV_OBJ_FLAG_SCROLLABLE);
+    return scr;
+}
+
 lv_obj_t * create_styled_label(lv_obj_t * parent, const char * text, lv_align_t align, int x_offset, int y_offset) {
     lv_obj_t * label = lv_label_create(parent);
     lv_label_set_text(label, text);
@@ -179,7 +200,7 @@ static void back_to_system_cb(lv_event_t *e) { create_system_submenu(); }
 void create_back_button(lv_obj_t * parent, lv_event_cb_t back_cb) {
     lv_obj_t * back_btn = lv_btn_create(parent);
     lv_obj_set_size(back_btn, 80, 28);
-    lv_obj_align(back_btn, LV_ALIGN_BOTTOM_MID, 0, -8);
+    lv_obj_align(back_btn, LV_ALIGN_BOTTOM_MID, 0, -4);
     lv_obj_set_style_bg_color(back_btn, lv_color_hex(0x222222), 0);
     lv_obj_add_event_cb(back_btn, back_cb ? back_cb : [](lv_event_t *e) { create_main_menu(false); }, LV_EVENT_CLICKED, NULL);
     lv_obj_t * back_label = lv_label_create(back_btn);
@@ -192,8 +213,7 @@ void create_back_button(lv_obj_t * parent, lv_event_cb_t back_cb) {
 // Create OTA Window
 //----------------------------------------------------
 void create_ota_window() {
-    lv_obj_t *ota_window = create_basic_window();
-    load_screen_and_delete_old(ota_window);
+    lv_obj_t *ota_window = create_hud_screen("OTA UPDATE");
 
     // Get current version
     String codeVersion = BADGE_VERSION;
@@ -205,11 +225,12 @@ void create_ota_window() {
     String localVersion = BADGE_VERSION;
 
     char buf[128];
-    snprintf(buf, sizeof(buf), "Current Version: %s\nOnline Version: %s", localVersion.c_str(), onlineVersion.c_str());
+    snprintf(buf, sizeof(buf), "Current: %s\nOnline:  %s", localVersion.c_str(), onlineVersion.c_str());
     lv_obj_t *label = lv_label_create(ota_window);
     lv_label_set_text(label, buf);
-    lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), LV_PART_MAIN);
-    lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 10);
+    lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), 0);
+    lv_obj_set_style_text_font(label, &lv_font_unscii_8, 0);
+    lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 28);
 
     if (isVersionNewer(onlineVersion, localVersion)) {
         lv_obj_t *update_btn = lv_btn_create(ota_window);
@@ -219,25 +240,24 @@ void create_ota_window() {
         lv_label_set_text(update_label, "Update Now");
         lv_obj_center(update_label);
         lv_obj_add_event_cb(update_btn, [](lv_event_t * e) {
-            // Show progress label
             const lv_obj_t *target = (const lv_obj_t *)lv_event_get_target(e);
             lv_obj_t * parent = lv_obj_get_parent(target);
             lv_obj_t *progress = lv_label_create(parent);
             lv_label_set_text(progress, "Starting OTA update...\nDo not power off.");
+            lv_obj_set_style_text_color(progress, lv_color_hex(0x00e5ff), 0);
             lv_obj_align(progress, LV_ALIGN_CENTER, 0, 60);
             lv_refr_now(NULL);
-            // Start OTA update (blocking)
             OTA::checkOTASync();
         }, LV_EVENT_CLICKED, NULL);
     } else if (availableVersion == -1) {
         lv_obj_t *err_label = lv_label_create(ota_window);
         lv_label_set_text(err_label, "Could not check online version.");
-        lv_obj_set_style_text_color(err_label, lv_color_hex(0xff4444), LV_PART_MAIN);
+        lv_obj_set_style_text_color(err_label, lv_color_hex(0xff4444), 0);
         lv_obj_align(err_label, LV_ALIGN_CENTER, 0, 30);
     } else {
         lv_obj_t *up_to_date = lv_label_create(ota_window);
         lv_label_set_text(up_to_date, "You are running the latest version.");
-        lv_obj_set_style_text_color(up_to_date, lv_color_hex(0x00c853), LV_PART_MAIN);
+        lv_obj_set_style_text_color(up_to_date, lv_color_hex(0x00c853), 0);
         lv_obj_align(up_to_date, LV_ALIGN_CENTER, 0, 30);
     }
     create_back_button(ota_window, back_to_system_cb);
@@ -247,14 +267,12 @@ void create_ota_window() {
 // Create Battery Window
 //----------------------------------------------------
 void create_battery_window() {
-    lv_obj_t *BatteryWindow = create_basic_window();
-    load_screen_and_delete_old(BatteryWindow);
+    lv_obj_t *BatteryWindow = create_hud_screen("BATTERY STATUS");
 
     char buf[100];
     float bat_cent = 0.0;
     float bat_volt = 0.0;
     
-    // Check if MAX17048 is available before reading
     if (max17048_available) {
         bat_cent = max17048.cellPercent();
         bat_volt = max17048.cellVoltage();
@@ -263,9 +281,12 @@ void create_battery_window() {
         snprintf(buf, sizeof(buf), "Battery Monitor\nNot Available\n\nCheck Hardware");
     }
 
-    create_styled_label(BatteryWindow, buf, LV_ALIGN_TOP_MID, 0, 10);
+    lv_obj_t *label = lv_label_create(BatteryWindow);
+    lv_label_set_text(label, buf);
+    lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), 0);
+    lv_obj_set_style_text_font(label, &lv_font_unscii_8, 0);
+    lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 28);
 
-    // Only create the battery scale if MAX17048 is available
     if (max17048_available) {
         lv_obj_t *scale = lv_scale_create(BatteryWindow);
         lv_scale_set_range(scale, 0, 100);
@@ -311,30 +332,29 @@ static void slider_event_cb(lv_event_t * e) {
 // Create Buzzer Window
 //----------------------------------------------------
 void create_buzzer_window() {
-    BuzzerWindow = create_basic_window();
-    load_screen_and_delete_old(BuzzerWindow);
+    BuzzerWindow = create_hud_screen("BUZZER TEST");
     
     // Initialize LEDC for buzzer by briefly setting up a tone channel
-    // This prevents the "LEDC is not initialized" error
     tone(BUZZER_PIN, 1000);
     delay(1);
     noTone(BUZZER_PIN);
-    // (codeVersion not needed here, remove line)
+
     lv_obj_t * slider = lv_slider_create(BuzzerWindow);
     lv_obj_set_width(slider, 200);
     lv_obj_align(slider, LV_ALIGN_CENTER, 0, 0);
     lv_slider_set_range(slider, 0, 2000);
     lv_obj_add_event_cb(slider, slider_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
-    // Create a label to display the slider value
     buzzer_slider_label = lv_label_create(BuzzerWindow);
     lv_label_set_text(buzzer_slider_label, "Tone: 0 Hz");
+    lv_obj_set_style_text_color(buzzer_slider_label, lv_color_hex(0xcccccc), 0);
+    lv_obj_set_style_text_font(buzzer_slider_label, &lv_font_unscii_8, 0);
     lv_obj_align_to(buzzer_slider_label, slider, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
 
-    // Add custom back button that stops buzzer before returning
+    // Custom back button that stops buzzer before returning
     lv_obj_t * back_btn = lv_btn_create(BuzzerWindow);
     lv_obj_set_size(back_btn, 80, 28);
-    lv_obj_align(back_btn, LV_ALIGN_BOTTOM_MID, 0, -8);
+    lv_obj_align(back_btn, LV_ALIGN_BOTTOM_MID, 0, -4);
     lv_obj_set_style_bg_color(back_btn, lv_color_hex(0x222222), 0);
     lv_obj_add_event_cb(back_btn, [](lv_event_t * e) {
         noTone(BUZZER_PIN);
@@ -351,15 +371,14 @@ void create_buzzer_window() {
 //----------------------------------------------------
 //----------------------------------------------------
 void create_sd_card_window() {
-    SDCardWindow = create_basic_window();
-    load_screen_and_delete_old(SDCardWindow);
+    SDCardWindow = create_hud_screen("SD CARD");
 
     File root = SD.open("/");
     if (!root) {
         Serial.println("Failed to open directory");
         lv_obj_t * error_label = lv_label_create(SDCardWindow);
         lv_label_set_text(error_label, "Failed to open SD card");
-        lv_obj_set_style_text_color(error_label, lv_color_hex(0xff4444), LV_PART_MAIN);
+        lv_obj_set_style_text_color(error_label, lv_color_hex(0xff4444), 0);
         lv_obj_align(error_label, LV_ALIGN_CENTER, 0, 0);
         create_back_button(SDCardWindow, back_to_system_cb);
         return;
@@ -369,13 +388,13 @@ void create_sd_card_window() {
         root.close();
         lv_obj_t * error_label = lv_label_create(SDCardWindow);
         lv_label_set_text(error_label, "Root is not a directory");
-        lv_obj_set_style_text_color(error_label, lv_color_hex(0xff4444), LV_PART_MAIN);
+        lv_obj_set_style_text_color(error_label, lv_color_hex(0xff4444), 0);
         lv_obj_align(error_label, LV_ALIGN_CENTER, 0, 0);
         create_back_button(SDCardWindow, back_to_system_cb);
         return;
     }
 
-    int file_y = 10;
+    int file_y = 28;
     File file = root.openNextFile();
     while (file) {
         char buf[100];
@@ -387,9 +406,10 @@ void create_sd_card_window() {
 
         lv_obj_t * label = lv_label_create(SDCardWindow);
         lv_label_set_text(label, buf);
-        lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), LV_PART_MAIN);
+        lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), 0);
+        lv_obj_set_style_text_font(label, &lv_font_unscii_8, 0);
         lv_obj_align(label, LV_ALIGN_TOP_LEFT, 10, file_y);
-        file_y += 16;
+        file_y += 14;
 
         file = root.openNextFile();
     }
@@ -407,14 +427,12 @@ void create_credits_window();
 //----------------------------------------------------
 void create_credits_window(){
     log_heap("enter create_credits_window");
-    lv_obj_t *scr = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
-    load_screen_and_delete_old(scr);
+    lv_obj_t *scr = create_hud_screen("CREDITS");
 
     lv_obj_t *t1 = lv_label_create(scr);
     lv_label_set_text(t1, "BSidesKC");
     lv_obj_set_style_text_color(t1, lv_color_hex(0x00e5ff), 0);
-    lv_obj_align(t1, LV_ALIGN_TOP_MID, 0, 8);
+    lv_obj_align(t1, LV_ALIGN_TOP_MID, 0, 28);
 
     // Apollo 11 transcript easter egg: tap title 5 times
     static int credits_tap_count = 0;
@@ -424,14 +442,7 @@ void create_credits_window(){
         credits_tap_count++;
         if (credits_tap_count >= 5) {
             credits_tap_count = 0;
-            lv_obj_t *scr = lv_obj_create(NULL);
-            lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
-            load_screen_and_delete_old(scr);
-
-            lv_obj_t *title = lv_label_create(scr);
-            lv_label_set_text(title, "APOLLO 11 TRANSCRIPT");
-            lv_obj_set_style_text_color(title, lv_color_hex(0x00e5ff), 0);
-            lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
+            lv_obj_t *scr = create_hud_screen("APOLLO 11 TRANSCRIPT");
 
             lv_obj_t *transcript = lv_label_create(scr);
             lv_label_set_long_mode(transcript, LV_LABEL_LONG_SCROLL_CIRCULAR);
@@ -457,7 +468,7 @@ void create_credits_window(){
 
             lv_obj_t *back = lv_btn_create(scr);
             lv_obj_set_size(back, 80, 28);
-            lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -8);
+            lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -4);
             lv_obj_set_style_bg_color(back, lv_color_hex(0x222222), 0);
             lv_obj_add_event_cb(back, [](lv_event_t *e) { create_credits_window(); }, LV_EVENT_CLICKED, NULL);
             lv_obj_t *bl = lv_label_create(back);
@@ -470,12 +481,12 @@ void create_credits_window(){
     lv_obj_t *t2 = lv_label_create(scr);
     lv_label_set_text(t2, "2 0 2 6");
     lv_obj_set_style_text_color(t2, lv_color_hex(0x00e5ff), 0);
-    lv_obj_align(t2, LV_ALIGN_TOP_MID, 0, 26);
+    lv_obj_align(t2, LV_ALIGN_TOP_MID, 0, 46);
 
     lv_obj_t *t3 = lv_label_create(scr);
     lv_label_set_text(t3, "April 25 - Kansas City");
     lv_obj_set_style_text_color(t3, lv_color_hex(0x888888), 0);
-    lv_obj_align(t3, LV_ALIGN_TOP_MID, 0, 44);
+    lv_obj_align(t3, LV_ALIGN_TOP_MID, 0, 64);
 
     lv_obj_t *body = lv_label_create(scr);
     lv_label_set_text(body, "Badge Hardware\nBadgePirates - bplabs.tech\n\n"
@@ -483,7 +494,7 @@ void create_credits_window(){
                             "Powered by\nLVGL - ESP32-S3");
     lv_obj_set_style_text_color(body, lv_color_hex(0x00c853), 0);
     lv_obj_set_style_text_align(body, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_align(body, LV_ALIGN_TOP_MID, 0, 62);
+    lv_obj_align(body, LV_ALIGN_TOP_MID, 0, 82);
 
     lv_obj_t *tag = lv_label_create(scr);
     lv_label_set_text(tag, "#BadgeLife");
@@ -492,7 +503,7 @@ void create_credits_window(){
 
     lv_obj_t *back = lv_btn_create(scr);
     lv_obj_set_size(back, 80, 28);
-    lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -8);
+    lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -4);
     lv_obj_set_style_bg_color(back, lv_color_hex(0x222222), 0);
     lv_obj_add_event_cb(back, [](lv_event_t *e) { create_main_menu(false); }, LV_EVENT_CLICKED, NULL);
     lv_obj_t *bl = lv_label_create(back);
@@ -539,20 +550,18 @@ void create_credits_window(){
         lv_obj_set_style_text_color(crawl, lv_color_hex(0x00e5ff), 0);
         lv_obj_set_style_text_align(crawl, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_width(crawl, 300);
-        lv_obj_align(crawl, LV_ALIGN_TOP_MID, 0, 240); // start below screen
+        lv_obj_align(crawl, LV_ALIGN_TOP_MID, 0, 240);
 
-        // Animate scrolling up
         lv_anim_t a;
         lv_anim_init(&a);
         lv_anim_set_var(&a, crawl);
         lv_anim_set_values(&a, 240, -800);
-        lv_anim_set_duration(&a, 30000); // 30 seconds
+        lv_anim_set_duration(&a, 30000);
         lv_anim_set_exec_cb(&a, [](void *obj, int32_t v) {
             lv_obj_set_y((lv_obj_t*)obj, v);
         });
         lv_anim_start(&a);
 
-        // Touch to exit
         lv_obj_add_flag(scr, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_event_cb(scr, [](lv_event_t *e) {
             create_credits_window();
@@ -565,8 +574,7 @@ void create_credits_window(){
 // Create System Info Window
 //----------------------------------------------------
 void create_system_info_window() {
-    SystemWindow = create_basic_window();
-    load_screen_and_delete_old(SystemWindow);
+    SystemWindow = create_hud_screen("SYSTEM INFO");
 
     uint32_t totalHeap = ESP.getHeapSize();
     uint32_t freeHeap = ESP.getFreeHeap();
@@ -587,14 +595,15 @@ void create_system_info_window() {
 
     char buf[700];
     snprintf(buf, sizeof(buf),
-        "Code Version: %s\nCode: %s\nMAC Address: %s\nRegistered: %s\nLast Check-in: %s\nWiFi SSID: %s\n\nTotal Heap: %d bytes\nFree Heap: %d bytes\nUsed Heap: %d bytes (%.2f%% used)",
+        "Version:  %s\nCode:     %s\nMAC:      %s\nReg:      %s\nCheckin:  %s\nWiFi:     %s\n\nHeap Total: %d\nHeap Free:  %d\nHeap Used:  %d (%.1f%%)",
         codeVersion.c_str(), codeName.c_str(), macAddress.c_str(), registrationStatus.c_str(), lastCheckin.c_str(), wifiSSID.c_str(),
         totalHeap, freeHeap, usedHeap, memoryUsagePercent);
 
     lv_obj_t * label = lv_label_create(SystemWindow);
     lv_label_set_text(label, buf);
-    lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), LV_PART_MAIN);
-    lv_obj_align(label, LV_ALIGN_TOP_LEFT, 10, 10); // Align to top-left for better readability
+    lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), 0);
+    lv_obj_set_style_text_font(label, &lv_font_unscii_8, 0);
+    lv_obj_align(label, LV_ALIGN_TOP_LEFT, 10, 28);
 
     create_back_button(SystemWindow, back_to_system_cb);
 }
@@ -677,14 +686,12 @@ static void build_ticker_text(char *buf, size_t buflen) {
 // Badge Card Window (#40)
 //----------------------------------------------------
 void create_badge_card_window() {
-    lv_obj_t *scr = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
-    load_screen_and_delete_old(scr);
+    lv_obj_t *scr = create_hud_screen("BADGE CARD");
 
     // Decorative border
     lv_obj_t *border = lv_obj_create(scr);
-    lv_obj_set_size(border, 280, 180);
-    lv_obj_align(border, LV_ALIGN_CENTER, 0, -10);
+    lv_obj_set_size(border, 280, 160);
+    lv_obj_align(border, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_style_bg_opa(border, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_color(border, lv_color_hex(0x00e5ff), 0);
     lv_obj_set_style_border_width(border, 1, 0);
@@ -696,20 +703,21 @@ void create_badge_card_window() {
     lv_label_set_text_fmt(name, "%s", callsign_get());
     lv_obj_set_style_text_font(name, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(name, lv_color_hex(0x00e5ff), 0);
-    lv_obj_align(name, LV_ALIGN_TOP_MID, 0, 30);
+    lv_obj_align(name, LV_ALIGN_TOP_MID, 0, 40);
 
     // Badge ID (MAC address)
     lv_obj_t *id = lv_label_create(scr);
     lv_label_set_text_fmt(id, "Badge: %s", WiFi.macAddress().c_str());
     lv_obj_set_style_text_color(id, lv_color_hex(0x888888), 0);
-    lv_obj_align(id, LV_ALIGN_TOP_MID, 0, 60);
+    lv_obj_set_style_text_font(id, &lv_font_unscii_8, 0);
+    lv_obj_align(id, LV_ALIGN_TOP_MID, 0, 70);
 
     // Conference branding
     lv_obj_t *conf = lv_label_create(scr);
     lv_label_set_text(conf, "BSidesKC 2026\nAd Astra");
     lv_obj_set_style_text_color(conf, lv_color_hex(0x00c853), 0);
     lv_obj_set_style_text_align(conf, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_align(conf, LV_ALIGN_CENTER, 0, 10);
+    lv_obj_align(conf, LV_ALIGN_CENTER, 0, 20);
 
     create_back_button(scr);
 }
@@ -905,20 +913,13 @@ void display_main_menu_buttons() {
 }
 
 static void create_screensaver_picker() {
-    lv_obj_t *scr = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
-    load_screen_and_delete_old(scr);
-
-    lv_obj_t *title = lv_label_create(scr);
-    lv_label_set_text(title, "SCREENSAVER");
-    lv_obj_set_style_text_color(title, lv_color_hex(0x00e5ff), 0);
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 6);
+    lv_obj_t *scr = create_hud_screen("SCREENSAVER");
 
     static const char* names[] = {"Ad Astra", "Matrix", "Terminal", "Lava Lamp"};
     for (int i = 0; i < SS_MODE_COUNT; i++) {
         lv_obj_t *btn = lv_btn_create(scr);
         lv_obj_set_size(btn, 200, 32);
-        lv_obj_align(btn, LV_ALIGN_TOP_MID, 0, 30 + i * 40);
+        lv_obj_align(btn, LV_ALIGN_TOP_MID, 0, 28 + i * 38);
         bool active = (screensaver_get_mode() == (ScreensaverMode)i);
         lv_obj_set_style_bg_color(btn, active ? lv_color_hex(0x1a3a1a) : lv_color_hex(0x1a1a2e), 0);
         lv_obj_set_style_border_color(btn, active ? lv_color_hex(0x00c853) : lv_color_hex(0x333333), 0);
@@ -939,14 +940,7 @@ static void create_screensaver_picker() {
 
 void create_system_submenu() {
     log_heap("enter create_system_submenu");
-    lv_obj_t *scr = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
-    load_screen_and_delete_old(scr);
-
-    lv_obj_t *hdr = lv_label_create(scr);
-    lv_label_set_text(hdr, LV_SYMBOL_SETTINGS " System");
-    lv_obj_set_style_text_color(hdr, lv_color_hex(0x00e5ff), 0);
-    lv_obj_align(hdr, LV_ALIGN_TOP_LEFT, 8, 4);
+    lv_obj_t *scr = create_hud_screen("SYSTEM");
 
     struct SysItem {
         const char *label;
@@ -971,7 +965,7 @@ void create_system_submenu() {
         int row = i / 2;
         lv_obj_t *btn = lv_btn_create(scr);
         lv_obj_set_size(btn, 152, 30);
-        lv_obj_set_pos(btn, 4 + col * 156, 24 + row * 34);
+        lv_obj_set_pos(btn, 4 + col * 156, 26 + row * 34);
         lv_obj_set_style_bg_color(btn, lv_color_hex(0x1a1a2e), 0);
         lv_obj_set_style_radius(btn, 6, 0);
         lv_obj_add_event_cb(btn, [](lv_event_t *e) {
@@ -991,13 +985,13 @@ void create_system_submenu() {
     int snd_col = n % 2;
     lv_obj_t *snd_btn = lv_btn_create(scr);
     lv_obj_set_size(snd_btn, 152, 30);
-    lv_obj_set_pos(snd_btn, 4 + snd_col * 156, 24 + snd_row * 34);
+    lv_obj_set_pos(snd_btn, 4 + snd_col * 156, 26 + snd_row * 34);
     lv_obj_set_style_bg_color(snd_btn, audio_is_muted() ? lv_color_hex(0x2e1a1a) : lv_color_hex(0x1a2e1a), 0);
     lv_obj_set_style_radius(snd_btn, 6, 0);
     lv_obj_add_event_cb(snd_btn, [](lv_event_t *e) {
         audio_set_mute(!audio_is_muted());
         audio_click();
-        create_system_submenu(); // refresh to update button state
+        create_system_submenu();
     }, LV_EVENT_CLICKED, NULL);
     lv_obj_t *snd_lbl = lv_label_create(snd_btn);
     lv_label_set_text(snd_lbl, audio_is_muted() ? LV_SYMBOL_MUTE " Muted" : LV_SYMBOL_AUDIO " Sound");
@@ -1092,26 +1086,23 @@ void create_main_menu(bool show_ota_check) {
 // Create Manual Check-In Window
 //----------------------------------------------------
 void create_checkin_window() {
-    lv_obj_t *checkin_window = create_basic_window();
-    load_screen_and_delete_old(checkin_window);
+    lv_obj_t *checkin_window = create_hud_screen("CHECK-IN");
 
     lv_obj_t *label = lv_label_create(checkin_window);
     lv_label_set_text(label, "Attempting to check in...");
-    lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 10);
+    lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), 0);
+    lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 28);
 
-    // Add spinner (LVGL 8/9: arc or spinner widget)
     lv_obj_t *spinner = lv_spinner_create(checkin_window);
-    lv_spinner_set_anim_params(spinner, 1000, 60); // 1s, 60deg arc
+    lv_spinner_set_anim_params(spinner, 1000, 60);
     lv_obj_set_size(spinner, 40, 40);
     lv_obj_align(spinner, LV_ALIGN_CENTER, 0, 30);
 
-    // Run check-in and show result
     bool success = false;
     String resultMsg;
     Serial.println("[Menu] Manual check-in triggered.");
     int httpResult = handleBadgeRegistrationWithResult();
     String lastCheckin = getLastCheckinTime();
-    // Remove spinner after check-in
     lv_obj_del(spinner);
     if (httpResult == 200 || httpResult == 201) {
         success = true;
@@ -1124,6 +1115,7 @@ void create_checkin_window() {
         resultMsg = "Check-in failed.\nPlease check Wi-Fi and try again.";
     }
     lv_label_set_text(label, resultMsg.c_str());
+    lv_obj_set_style_text_color(label, success ? lv_color_hex(0x00c853) : lv_color_hex(0xff4444), 0);
 
     create_back_button(checkin_window);
 }
