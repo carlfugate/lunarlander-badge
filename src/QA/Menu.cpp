@@ -64,11 +64,11 @@ static void log_heap(const char *tag) {
 }
 
 void load_screen_and_delete_old(lv_obj_t *new_scr) {
-    lv_obj_t *old = lv_scr_act();
-    lv_scr_load(new_scr);
-    if (old && old != new_scr) {
-        lv_obj_del(old);
-    }
+    lv_scr_load_anim(new_scr, LV_SCR_LOAD_ANIM_MOVE_LEFT, 200, 0, true);
+}
+
+void load_screen_and_delete_old_back(lv_obj_t *new_scr) {
+    lv_scr_load_anim(new_scr, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 200, 0, true);
 }
 
 // Modern button style with gradient and shadow, now supports custom colors
@@ -442,6 +442,57 @@ void create_credits_window(){
     lv_label_set_text(t1, "BSidesKC");
     lv_obj_set_style_text_color(t1, lv_color_hex(0x00e5ff), 0);
     lv_obj_align(t1, LV_ALIGN_TOP_MID, 0, 8);
+
+    // Apollo 11 transcript easter egg: tap title 5 times
+    static int credits_tap_count = 0;
+    credits_tap_count = 0;
+    lv_obj_add_flag(t1, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(t1, [](lv_event_t *e) {
+        credits_tap_count++;
+        if (credits_tap_count >= 5) {
+            credits_tap_count = 0;
+            lv_obj_t *scr = lv_obj_create(NULL);
+            lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
+            load_screen_and_delete_old(scr);
+
+            lv_obj_t *title = lv_label_create(scr);
+            lv_label_set_text(title, "APOLLO 11 TRANSCRIPT");
+            lv_obj_set_style_text_color(title, lv_color_hex(0x00e5ff), 0);
+            lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
+
+            lv_obj_t *transcript = lv_label_create(scr);
+            lv_label_set_long_mode(transcript, LV_LABEL_LONG_SCROLL_CIRCULAR);
+            lv_obj_set_width(transcript, 300);
+            lv_label_set_text(transcript,
+                "HOUSTON: 60 seconds.    "
+                "EAGLE: Got the shadow out there.    "
+                "HOUSTON: 30 seconds.    "
+                "ALDRIN: Contact light.    "
+                "ARMSTRONG: Okay, engine stop.    "
+                "ALDRIN: ACA out of detent. Mode control, both auto.    "
+                "ALDRIN: Descent engine command override, off. Engine arm, off.    "
+                "ARMSTRONG: Houston, Tranquility Base here. The Eagle has landed.    "
+                "HOUSTON: Roger, Tranquility, we copy you on the ground. You got a bunch of guys about to turn blue. We're breathing again. Thanks a lot.    "
+                "ARMSTRONG: Thank you.    "
+                "HOUSTON: You're looking good here.    "
+                "ALDRIN: Okay, let's get on with it.    "
+                "ARMSTRONG: Okay.    "
+            );
+            lv_obj_set_style_text_color(transcript, lv_color_hex(0x00c853), 0);
+            lv_obj_set_style_anim_duration(transcript, lv_anim_speed(20), 0);
+            lv_obj_align(transcript, LV_ALIGN_CENTER, 0, 0);
+
+            lv_obj_t *back = lv_btn_create(scr);
+            lv_obj_set_size(back, 80, 28);
+            lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -8);
+            lv_obj_set_style_bg_color(back, lv_color_hex(0x222222), 0);
+            lv_obj_add_event_cb(back, [](lv_event_t *e) { create_credits_window(); }, LV_EVENT_CLICKED, NULL);
+            lv_obj_t *bl = lv_label_create(back);
+            lv_label_set_text(bl, LV_SYMBOL_LEFT " BACK");
+            lv_obj_set_style_text_color(bl, lv_color_hex(0x888888), 0);
+            lv_obj_center(bl);
+        }
+    }, LV_EVENT_CLICKED, NULL);
 
     lv_obj_t *t2 = lv_label_create(scr);
     lv_label_set_text(t2, "2 0 2 6");
