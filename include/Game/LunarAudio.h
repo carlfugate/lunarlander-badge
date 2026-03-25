@@ -1,6 +1,8 @@
 #ifndef LUNAR_AUDIO_H
 #define LUNAR_AUDIO_H
 
+#include <stdint.h>
+
 void audio_set_mute(bool muted);
 bool audio_is_muted();
 void audio_click();
