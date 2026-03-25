@@ -405,13 +405,16 @@ void renderer_draw(const GameState &gs) {
 }
 
 void renderer_cleanup() {
-    if (canvas) { lv_obj_del(canvas); canvas = NULL; }
-    if (lbl_fuel) { lv_obj_del(lbl_fuel); lbl_fuel = NULL; }
-    if (lbl_speed) { lv_obj_del(lbl_speed); lbl_speed = NULL; }
-    if (lbl_alt) { lv_obj_del(lbl_alt); lbl_alt = NULL; }
-    if (lbl_time) { lv_obj_del(lbl_time); lbl_time = NULL; }
-    if (lbl_warn) { lv_obj_del(lbl_warn); lbl_warn = NULL; }
-    if (bar_fuel) { lv_obj_del(bar_fuel); bar_fuel = NULL; }
+    // Don't lv_obj_del individual widgets — they're children of game_screen
+    // and will be deleted when the screen is deleted by load_screen_and_delete_old.
+    // Just null our pointers and free the raw buffer.
+    canvas = NULL;
+    lbl_fuel = NULL;
+    lbl_speed = NULL;
+    lbl_alt = NULL;
+    lbl_time = NULL;
+    lbl_warn = NULL;
+    bar_fuel = NULL;
     if (canvas_buf) { free(canvas_buf); canvas_buf = NULL; }
     stars_generated = false;
 }

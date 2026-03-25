@@ -139,6 +139,7 @@ static void ss_timeout_cb(lv_timer_t *t) {
     lv_obj_add_event_cb(ss_screen, ss_touch_cb, LV_EVENT_PRESSED, NULL);
     lv_obj_add_flag(ss_screen, LV_OBJ_FLAG_CLICKABLE);
 
+    stop_menu_timers();
     load_screen_and_delete_old(ss_screen);
     init_stars();
     ss_active = true;
@@ -159,7 +160,7 @@ void screensaver_start_timer() {
 
 void screensaver_stop() {
     if (ss_timer) { lv_timer_del(ss_timer); ss_timer = NULL; }
-    if (ss_canvas) { lv_obj_del(ss_canvas); ss_canvas = NULL; }
+    ss_canvas = NULL;  // child of ss_screen — deleted by load_screen_and_delete_old()
     if (ss_buf) { free(ss_buf); ss_buf = NULL; }
     ss_screen = NULL;
     ss_active = false;

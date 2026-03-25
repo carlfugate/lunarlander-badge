@@ -17,6 +17,7 @@ extern lv_obj_t * password_textarea;
 extern String selected_ssid;
 
 void create_main_menu(bool show_ota_check = true);
+void stop_menu_timers();
 void load_screen_and_delete_old(lv_obj_t *new_scr);
 void load_screen_and_delete_old_back(lv_obj_t *new_scr);
 extern lv_obj_t * main_menu;

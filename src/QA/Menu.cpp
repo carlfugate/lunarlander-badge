@@ -62,6 +62,17 @@ lv_obj_t * ScheduleWindow = nullptr;
 
 bool performOtaUpdateCheck = true;
 
+// File-level timer statics for proper lifecycle management
+static lv_timer_t *met_timer = NULL;
+static lv_timer_t *hb_timer = NULL;
+static lv_timer_t *crawl_timer_global = NULL;
+
+void stop_menu_timers() {
+    if (met_timer) { lv_timer_del(met_timer); met_timer = NULL; }
+    if (hb_timer) { lv_timer_del(hb_timer); hb_timer = NULL; }
+    if (crawl_timer_global) { lv_timer_del(crawl_timer_global); crawl_timer_global = NULL; }
+}
+
 static void log_heap(const char *tag) {
     Serial.printf("[HEAP] %s: free=%d, min=%d\n", tag, ESP.getFreeHeap(), ESP.getMinFreeHeap());
 }
@@ -535,10 +546,10 @@ void create_credits_window(){
     lv_obj_center(bl);
 
     // Credits crawl easter egg - starts after 10s
-    static lv_timer_t *crawl_timer = NULL;
-    if (crawl_timer) lv_timer_del(crawl_timer);
-    crawl_timer = lv_timer_create([](lv_timer_t *t) {
+    if (crawl_timer_global) lv_timer_del(crawl_timer_global);
+    crawl_timer_global = lv_timer_create([](lv_timer_t *t) {
         lv_timer_del(t);
+        crawl_timer_global = NULL;
         lv_obj_t *scr = lv_obj_create(NULL);
         lv_obj_set_style_bg_color(scr, lv_color_black(), 0);
         load_screen_and_delete_old(scr);
@@ -592,7 +603,7 @@ void create_credits_window(){
             create_credits_window();
         }, LV_EVENT_CLICKED, NULL);
     }, 10000, NULL);
-    lv_timer_set_repeat_count(crawl_timer, 1);
+    lv_timer_set_repeat_count(crawl_timer_global, 1);
 }
 
 //----------------------------------------------------
@@ -792,6 +803,8 @@ void create_badge_card_window() {
 // Display Main Menu Buttons
 //----------------------------------------------------
 void display_main_menu_buttons() {
+    stop_menu_timers();  // clean up timers from previous menu instance
+
     // Disable flex — use absolute positioning
     lv_obj_remove_style_all(main_menu);
     lv_obj_set_style_bg_color(main_menu, lv_color_hex(0x0a0a0f), 0);
@@ -836,7 +849,6 @@ void display_main_menu_buttons() {
     lv_obj_align(met_label, LV_ALIGN_CENTER, 0, 0);
     lv_label_set_text(met_label, "MET 00:00:00");
 
-    static lv_timer_t *met_timer = NULL;
     if (met_timer) lv_timer_del(met_timer);
     met_timer = lv_timer_create([](lv_timer_t *t) {
         if (lv_scr_act() != main_menu) return; // screen changed, skip
@@ -1097,7 +1109,6 @@ void create_main_menu(bool show_ota_check) {
                 display_main_menu_buttons();
                 screensaver_start_timer();
                 // Heartbeat LED - double-pulse on LED 0
-                static lv_timer_t *hb_timer = NULL;
                 if (hb_timer) lv_timer_del(hb_timer);
                 hb_timer = lv_timer_create([](lv_timer_t *t) {
         if (lv_scr_act() != main_menu) return;
@@ -1124,7 +1135,6 @@ void create_main_menu(bool show_ota_check) {
     display_main_menu_buttons();
     screensaver_start_timer();
     // Heartbeat LED - double-pulse on LED 0
-    static lv_timer_t *hb_timer = NULL;
     if (hb_timer) lv_timer_del(hb_timer);
     hb_timer = lv_timer_create([](lv_timer_t *t) {
         if (lv_scr_act() != main_menu) return;

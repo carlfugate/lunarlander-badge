@@ -180,12 +180,8 @@ static void bling_button_event_cb(lv_event_t* e) {
 
 // --- Bling window UI ---
 void create_bling_window() {
-    if (BlingWindow) {
-        lv_obj_del(BlingWindow);
-        BlingWindow = nullptr;
-    }
     BlingWindow = create_basic_window();
-    load_screen_and_delete_old(BlingWindow);
+    load_screen_and_delete_old(BlingWindow);  // old screen (and its children) deleted here
     bling_ticker.detach(); // Stop animation when opening window
     bling_mode = 0;
 

@@ -596,6 +596,7 @@ static void show_game_over() {
 }
 
 void lunar_lander_start() {
+    stop_menu_timers();
     bling_stop_animation();
     game_screen = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(game_screen, lv_color_black(), 0);
