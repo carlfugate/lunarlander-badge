@@ -886,7 +886,7 @@ void display_main_menu_buttons() {
     build_ticker_text(ticker_buf, sizeof(ticker_buf));
     lv_label_set_text(ticker, ticker_buf);
     lv_obj_set_style_text_color(ticker, lv_color_hex(0x00e5ff), 0);
-    lv_obj_set_style_anim_duration(ticker, lv_anim_speed(30), 0);
+    lv_obj_set_style_anim_duration(ticker, 30000, 0); // 30s full scroll
     lv_obj_align(ticker, LV_ALIGN_LEFT_MID, 4, 0);
 
     // Version in bottom-right corner
