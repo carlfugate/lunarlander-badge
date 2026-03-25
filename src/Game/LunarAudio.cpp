@@ -183,8 +183,9 @@ void leds_achievement() {
 
 #else // NATIVE_TEST stubs
 
-void audio_set_mute(bool) {}
-bool audio_is_muted() { return false; }
+static bool s_muted = false;
+void audio_set_mute(bool m) { s_muted = m; }
+bool audio_is_muted() { return s_muted; }
 void audio_click() {}
 void audio_click_back() {}
 
