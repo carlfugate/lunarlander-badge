@@ -79,9 +79,17 @@ bool Screen_Module_GetTouch(uint16_t &x, uint16_t &y) {
     return false;
 }
 
+static int boot_tone_idx = 0;
+static const uint16_t boot_tones[] = {440, 554, 659, 880, 1047, 1319};
+
 void displayBootStatusLine(const char* msg, bool success) {
     tft.setTextColor(success ? TFT_GREEN : TFT_RED, TFT_BLACK);
     tft.println(msg);
+    if (boot_tone_idx < 6) {
+        tone(BUZZER_PIN, boot_tones[boot_tone_idx], 60);
+        boot_tone_idx++;
+    }
+    delay(150);
 }
 
 void displayBootTerminalHeader() {
@@ -124,6 +132,14 @@ void displayBootComplete(bool allOk) {
     if (allOk) {
         tft.setTextColor(0x07FF, TFT_BLACK);  // Cyan
         tft.println("> All systems nominal.");
+        tft.println("");
+        tft.setTextColor(0x07FF, TFT_BLACK);
+        tft.print("> ALL SYSTEMS GO");
+        delay(500);
+        tft.println(" - LAUNCH COMMIT");
+        tone(BUZZER_PIN, 880, 150); delay(300);
+        tone(BUZZER_PIN, 880, 150); delay(300);
+        tone(BUZZER_PIN, 1760, 400); delay(500);
     } else {
         tft.setTextColor(0xFE60, TFT_BLACK);  // Amber/orange
         tft.println("> Partial systems. Offline mode.");
