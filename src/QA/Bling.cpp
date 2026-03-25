@@ -5,12 +5,6 @@
 #include <Adafruit_NeoPixel.h>
 #include <Ticker.h>
 
-// Forward declarations for symbols not in Menu.h
-extern "C" lv_style_t style_modern_btns[10];
-extern lv_obj_t* create_basic_window();
-
-static lv_obj_t* BlingWindow = nullptr;
-
 static Ticker bling_ticker;
 static int bling_mode = 0; // 0=none, 1=rainbow, 2=police, 3=all blink, 4=chase, 5=random, 6=breathe, 7=aurora
 
@@ -163,48 +157,47 @@ static void bling_animate() {
     }
 }
 
-// --- Button event handler ---
-static void bling_button_event_cb(lv_event_t* e) {
-    lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
-    const char* label = lv_label_get_text(lv_obj_get_child(btn, 0));
-    if (strcmp(label, "Rainbow") == 0) start_bling_animation(1);
-    else if (strcmp(label, "Police") == 0) start_bling_animation(2);
-    else if (strcmp(label, "All Blink") == 0) start_bling_animation(3);
-    else if (strcmp(label, "Chase") == 0) start_bling_animation(4);
-    else if (strcmp(label, "Random") == 0) start_bling_animation(5);
-    else if (strcmp(label, "Breathe") == 0) start_bling_animation(6);
-    else if (strcmp(label, "Aurora") == 0) start_bling_animation(7);
-    else if (strcmp(label, "Morse") == 0) start_bling_animation(8);
-    else if (strcmp(label, "Off") == 0) start_bling_animation(0);
-}
-
 // --- Bling window UI ---
 void create_bling_window() {
-    BlingWindow = create_basic_window();
-    load_screen_and_delete_old(BlingWindow);  // old screen (and its children) deleted here
-    bling_ticker.detach(); // Stop animation when opening window
+    lv_obj_t *scr = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
+    load_screen_and_delete_old(scr);
+    bling_ticker.detach();
     bling_mode = 0;
 
-    // Add Bling buttons (restored from previous working version)
-    const char* bling_modes[] = {"Rainbow", "Police", "All Blink", "Chase", "Random", "Breathe", "Aurora", "Morse", "Off"};
-    int num_modes = sizeof(bling_modes)/sizeof(bling_modes[0]);
-    for (int i = 0; i < num_modes; ++i) {
-        lv_obj_t* btn = lv_btn_create(BlingWindow);
-        lv_obj_add_style(btn, &style_modern_btns[i%10], 0);
+    lv_obj_t *hdr = lv_label_create(scr);
+    lv_label_set_text(hdr, LV_SYMBOL_TINT " Bling");
+    lv_obj_set_style_text_color(hdr, lv_color_hex(0x00e5ff), 0);
+    lv_obj_align(hdr, LV_ALIGN_TOP_LEFT, 8, 4);
+
+    static const struct { const char *name; int mode; } modes[] = {
+        {"Rainbow",  1}, {"Police",  2}, {"Blink",   3},
+        {"Chase",    4}, {"Random",  5}, {"Breathe", 6},
+        {"Aurora",   7}, {"Morse",   8}, {"Off",     0},
+    };
+
+    for (int i = 0; i < 9; i++) {
+        lv_obj_t *btn = lv_btn_create(scr);
         lv_obj_set_size(btn, 100, 48);
-        lv_obj_add_event_cb(btn, bling_button_event_cb, LV_EVENT_CLICKED, NULL);
-        lv_obj_t* label = lv_label_create(btn);
-        lv_label_set_text(label, bling_modes[i]);
-        lv_obj_center(label);
+        lv_obj_set_pos(btn, 4 + (i % 3) * 106, 24 + (i / 3) * 54);
+        lv_obj_set_style_bg_color(btn, lv_color_hex(0x1a1a2e), 0);
+        lv_obj_set_style_radius(btn, 8, 0);
+        lv_obj_add_event_cb(btn, [](lv_event_t *e) {
+            start_bling_animation((int)(intptr_t)lv_event_get_user_data(e));
+        }, LV_EVENT_CLICKED, (void*)(intptr_t)modes[i].mode);
+        lv_obj_t *lbl = lv_label_create(btn);
+        lv_label_set_text(lbl, modes[i].name);
+        lv_obj_set_style_text_color(lbl, lv_color_hex(0xcccccc), 0);
+        lv_obj_center(lbl);
     }
-    // Themed back button
-    lv_obj_t* back_btn = lv_btn_create(BlingWindow);
-    lv_obj_set_size(back_btn, 80, 28);
-    lv_obj_align(back_btn, LV_ALIGN_BOTTOM_MID, 0, -8);
-    lv_obj_set_style_bg_color(back_btn, lv_color_hex(0x222222), LV_PART_MAIN);
-    lv_obj_t* back_label = lv_label_create(back_btn);
-    lv_label_set_text(back_label, LV_SYMBOL_LEFT " BACK");
-    lv_obj_set_style_text_color(back_label, lv_color_hex(0x888888), LV_PART_MAIN);
-    lv_obj_center(back_label);
-    lv_obj_add_event_cb(back_btn, [](lv_event_t* e){ create_main_menu(false); }, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_t *back = lv_btn_create(scr);
+    lv_obj_set_size(back, 80, 28);
+    lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -4);
+    lv_obj_set_style_bg_color(back, lv_color_hex(0x222222), 0);
+    lv_obj_add_event_cb(back, [](lv_event_t *e) { create_main_menu(false); }, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *bl = lv_label_create(back);
+    lv_label_set_text(bl, LV_SYMBOL_LEFT " BACK");
+    lv_obj_set_style_text_color(bl, lv_color_hex(0x888888), 0);
+    lv_obj_center(bl);
 }
