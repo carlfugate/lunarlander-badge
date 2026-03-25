@@ -35,3 +35,4 @@ sim/lunarlander_sim
 
 # Soak test logs
 tests/hardware/logs/*.log
+tests/hardware/logs/*.csv

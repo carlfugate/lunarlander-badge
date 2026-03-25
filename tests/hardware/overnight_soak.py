@@ -211,6 +211,75 @@ class SoakTest:
                 self.stats['heap_warnings'] += 1
         return heap
 
+    def query_badge_state(self, context=''):
+        """Query and log full badge state. Returns dict or None."""
+        state = {}
+        try:
+            ok, resp = self.badge.send('sys.heap')
+            if ok and 'free=' in resp:
+                state['heap_free'] = int(resp.split('free=')[1].split()[0])
+                state['heap_min'] = int(resp.split('min=')[1].split()[0])
+
+            ok, resp = self.badge.send('bling.status')
+            if ok and 'mode=' in resp:
+                state['bling_mode'] = resp.split('mode=')[1].split()[0]
+
+            ok, resp = self.badge.send('audio.status')
+            if ok and 'muted=' in resp:
+                state['audio_muted'] = resp.split('muted=')[1].split()[0]
+
+            ok, resp = self.badge.send('ble.status')
+            if ok and 'nearby=' in resp:
+                state['ble_nearby'] = resp.split('nearby=')[1].split()[0]
+                state['ble_total'] = resp.split('total=')[1].split()[0]
+
+            ok, resp = self.badge.send('callsign.get')
+            if ok and 'name=' in resp:
+                state['callsign'] = resp.split('name=')[1].split()[0]
+
+            ok, resp = self.badge.send('screensaver.status')
+            if ok and 'mode=' in resp:
+                state['ss_mode'] = resp.split('mode=')[1].split()[0]
+
+            self.log('STATE', f'{context} {" ".join(f"{k}={v}" for k,v in state.items())}')
+            return state
+        except Exception as e:
+            self.log('STATE', f'{context} error={e}')
+            return None
+
+    def validate_and_reset(self):
+        """Ensure badge is in a clean state after a test. Fix if not."""
+        issues = []
+
+        ok, resp = self.badge.send('bling.status')
+        if ok and resp and 'mode=0' not in resp:
+            issues.append(f'bling still active: {resp.strip()}')
+            self.cmd('bling.off')
+
+        ok, resp = self.badge.send('audio.status')
+        if ok and resp and 'muted=1' in resp:
+            issues.append('audio still muted')
+            self.cmd('audio.unmute')
+
+        self.cmd('nav.main')
+
+        if issues:
+            self.log('CLEANUP', f'Post-test cleanup: {", ".join(issues)}')
+
+        return len(issues) == 0
+
+    def log_heap_csv(self, cycle, context):
+        """Write heap data in CSV format for trend analysis."""
+        heap = self.badge.get_heap()
+        if heap:
+            csv_file = self.log_file.replace('.log', '_heap.csv')
+            write_header = not os.path.exists(csv_file)
+            with open(csv_file, 'a') as f:
+                if write_header:
+                    f.write('timestamp,elapsed_s,cycle,free,min,context\n')
+                elapsed = int((datetime.now() - self.start_time).total_seconds())
+                f.write(f'{datetime.now().isoformat()},{elapsed},{cycle},{heap[0]},{heap[1]},{context}\n')
+
     # === Test Scenarios ===
 
     def test_sequential_nav(self):
@@ -565,23 +634,37 @@ class SoakTest:
                         fn()
                     except Exception as e:
                         self.log('ERROR', f'Test exception: {e}')
+                    self.validate_and_reset()
 
                 # Heap check every cycle
                 heap = self.check_heap(f'cycle_{cycle}')
                 if heap:
                     self.log('HEAP', f'free={heap[0]} min={heap[1]}')
 
+                # Progress summary
+                elapsed = str(datetime.now() - self.start_time).split('.')[0]
+                remaining = str(end_time - datetime.now()).split('.')[0] if datetime.now() < end_time else '0:00:00'
+                self.log('PROGRESS',
+                    f'cycle={cycle} elapsed={elapsed} remaining={remaining} '
+                    f'cmds={self.stats["commands_sent"]} ok={self.stats["commands_ok"]} '
+                    f'fail={self.stats["commands_failed"]} crashes={self.stats["crashes"]} '
+                    f'hangs={self.stats["hangs"]} recoveries={self.stats["recoveries"]} '
+                    f'heap_warns={self.stats["heap_warnings"]}')
+
                 # Idle soak every 10 cycles (90s triggers screensaver + one scene transition)
                 if cycle % 10 == 0:
+                    self.query_badge_state(f'cycle_{cycle}_snapshot')
                     self.log('SOAK', 'Idle soak 90s')
                     self.cmd('test.idle 90000', timeout=120)
 
                 # Every 50 cycles, do a long idle soak (5 min) to test screensaver stability
                 if cycle % 50 == 0:
                     self.log('SOAK', f'Long idle soak at cycle {cycle} (300s)')
+                    self.log_heap_csv(cycle, 'long_soak_start')
                     heap_before = self.check_heap(f'long_soak_start_{cycle}')
                     self.cmd('test.idle 300000', timeout=330)
                     heap_after = self.check_heap(f'long_soak_end_{cycle}')
+                    self.log_heap_csv(cycle, 'long_soak_end')
                     if heap_before and heap_after:
                         delta = heap_after[0] - heap_before[0]
                         self.log('SOAK', f'Long soak heap delta: {delta} bytes')
@@ -595,6 +678,9 @@ class SoakTest:
                 if cycle % 30 == 0:
                     self.log('CONFLICT', f'Screensaver interrupt test at cycle {cycle}')
                     self.test_screensaver_interrupt()
+
+                # Heap CSV for trend analysis
+                self.log_heap_csv(cycle, 'end_of_cycle')
 
                 # Reset to known state
                 self.cmd('nav.main')
