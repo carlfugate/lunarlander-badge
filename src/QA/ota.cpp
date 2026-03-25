@@ -55,11 +55,12 @@ void OTA::indicate_manifest_load(){
 
 void OTA::indicate_updating(){
     tft.fillScreen(TFT_BLACK);
-    tft.setTextDatum(MC_DATUM); 
-    tft.drawString("UPDATE IN", tft.width() / 2, (tft.height() / 2) - 40);
-    tft.drawString("PROGRESS", tft.width() / 2, (tft.height() / 2));
+    tft.setTextDatum(MC_DATUM);
     tft.setTextSize(2);
-    tft.drawString("DO NOT POWER OFF", tft.width() / 2, (tft.height() / 2) + 40);
+    tft.drawString("UPLOADING FLIGHT", tft.width() / 2, (tft.height() / 2) - 60);
+    tft.drawString("SOFTWARE...", tft.width() / 2, (tft.height() / 2) - 36);
+    tft.setTextSize(1);
+    tft.drawString("DO NOT POWER OFF", tft.width() / 2, (tft.height() / 2) + 60);
     tft.setTextSize(3);
 }
 
@@ -173,6 +174,30 @@ void OTA::checkOTASync()
             char binbuf[80];
             strcpy(binbuf, OTA_SERVER_URL);
             strcat(binbuf, OTA_BINARY_NAME);
+
+            // NASA-style progress display
+            Update.onProgress([](size_t cur, size_t total) {
+                if (total == 0) return;
+                int pct = (cur * 100) / total;
+                int totalBlocks = (total + 4095) / 4096;
+                int curBlock = (cur + 4095) / 4096;
+
+                char bar[12];
+                int filled = pct / 10;
+                for (int i = 0; i < 10; i++)
+                    bar[i] = (i < filled) ? '#' : '-';
+                bar[10] = '\0';
+
+                char buf[64];
+                snprintf(buf, sizeof(buf), "Block %d/%d [%s] %d%%", curBlock, totalBlocks, bar, pct);
+
+                int cy = tft.height() / 2;
+                tft.fillRect(0, cy - 10, tft.width(), 24, TFT_BLACK);
+                tft.setTextDatum(MC_DATUM);
+                tft.setTextSize(1);
+                tft.drawString(buf, tft.width() / 2, cy);
+            });
+
             t_httpUpdate_return ret = ESPhttpUpdate.update(binbuf);
 
             // I don't think this code actually is triggered unless HTTP fails.
