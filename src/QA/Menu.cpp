@@ -7,6 +7,7 @@
 #include "Hardware/BadgeRegistration.h"
 #include "Hardware/BadgeVersion.h"
 #include "Game/LunarState.h"
+#include "Game/LunarAudio.h"
 
 void create_checkin_window();
 void create_credits_window();
@@ -525,6 +526,80 @@ void button_event_handler(lv_event_t * e) {
     }
 }
 
+// Comms chatter ticker message pool
+static const char* ticker_msgs[] = {
+    "CAPCOM: Go for TLI",
+    "FIDO: Trajectory nominal",
+    "EECOM: Cryo pressure stable",
+    "FLIGHT: We are GO",
+    "RETRO: Entry corridor confirmed",
+    "GNC: Guidance is GO",
+    "TELMU: LM systems nominal",
+    "CAPCOM: You are GO for landing",
+    "SURGEON: Crew vitals nominal",
+    "BOOSTER: All engines nominal",
+    "NETWORK: Tracking stations acquired",
+    "INCO: Telemetry stream active",
+    "FAO: Flight activities on schedule",
+    "CAPCOM: Eagle, you are GO for PDI",
+    "EAGLE: The Eagle has landed",
+    "HOUSTON: Roger, Tranquility",
+    "CAPCOM: Beautiful, just beautiful",
+    "FLIGHT: All stations, stand by",
+    "EECOM: Fuel cells looking good",
+    "GNC: AGC is GO",
+    "RETRO: Go for orbit",
+    "FIDO: Perigee 60.9 nautical miles",
+    "CAPCOM: 10 seconds to ignition",
+    "BOOSTER: Thrust is GO",
+    "FLIGHT: Mark, T-minus 10",
+    "SURGEON: Heart rates nominal",
+    "NETWORK: Goldstone has AOS",
+    "INCO: Data rate high",
+    "CAPCOM: Godspeed",
+    "FLIGHT: Resume countdown",
+    "GNC: Pitch program complete",
+    "EECOM: O2 flow nominal",
+    "RETRO: Deorbit burn confirmed",
+    "FIDO: Apogee 168 nautical miles",
+    "TELMU: Descent stage armed",
+    "CAPCOM: Ad astra per aspera",
+    "FLIGHT: Kansas City, we are GO",
+    "CAPCOM: BSidesKC crew, welcome aboard",
+    "NETWORK: Badge mesh active",
+    "INCO: Leaderboard synced",
+    "FLIGHT: Contest window open",
+    "CAPCOM: All crews report to stations",
+    "SURGEON: Coffee levels critical",
+    "EECOM: Snack reserves depleted",
+    "FIDO: Hallway track trajectory set",
+    "FLIGHT: CTF operations underway",
+    "RETRO: After-party vector locked",
+    "CAPCOM: Remember your callsign",
+    "NETWORK: 6 NeoPixels standing by",
+    "FLIGHT: Ad Astra Protocol active",
+};
+static const int NUM_TICKER_MSGS = sizeof(ticker_msgs) / sizeof(ticker_msgs[0]);
+
+static void build_ticker_text(char *buf, size_t buflen) {
+    int indices[8];
+    for (int i = 0; i < 8; i++) {
+        int idx;
+        bool dup;
+        do {
+            idx = random(NUM_TICKER_MSGS);
+            dup = false;
+            for (int j = 0; j < i; j++) if (indices[j] == idx) { dup = true; break; }
+        } while (dup);
+        indices[i] = idx;
+    }
+    buf[0] = '\0';
+    for (int i = 0; i < 8; i++) {
+        if (i > 0) strlcat(buf, "    ", buflen);
+        strlcat(buf, ticker_msgs[indices[i]], buflen);
+    }
+}
+
 //----------------------------------------------------
 // Display Main Menu Buttons
 //----------------------------------------------------
@@ -651,12 +726,9 @@ void display_main_menu_buttons() {
     lv_obj_t *ticker = lv_label_create(ticker_bg);
     lv_label_set_long_mode(ticker, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_width(ticker, 290);
-    lv_label_set_text(ticker,
-        LV_SYMBOL_GPS " AD ASTRA PROTOCOL ACTIVE    "
-        LV_SYMBOL_CHARGE " SYSTEMS NOMINAL    "
-        LV_SYMBOL_WIFI " COMMS ONLINE    "
-        LV_SYMBOL_BELL " BSidesKC 2026 // APRIL 25 // KANSAS CITY    "
-        LV_SYMBOL_WARNING " LAUNCH SEQUENCE ARMED    ");
+    static char ticker_buf[512];
+    build_ticker_text(ticker_buf, sizeof(ticker_buf));
+    lv_label_set_text(ticker, ticker_buf);
     lv_obj_set_style_text_color(ticker, lv_color_hex(0x00e5ff), 0);
     lv_obj_set_style_anim_duration(ticker, lv_anim_speed(30), 0);
     lv_obj_align(ticker, LV_ALIGN_LEFT_MID, 4, 0);
