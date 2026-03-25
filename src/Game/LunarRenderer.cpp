@@ -34,6 +34,7 @@ static Camera cam;
 static lv_obj_t *lbl_fuel = NULL;
 static lv_obj_t *lbl_speed = NULL;
 static lv_obj_t *lbl_alt = NULL;
+static lv_obj_t *lbl_time = NULL;
 static lv_obj_t *lbl_warn = NULL;
 static lv_obj_t *bar_fuel = NULL;
 
@@ -96,6 +97,11 @@ void renderer_init(lv_obj_t *parent) {
     lv_obj_set_pos(lbl_alt, 4, 36);
     lv_obj_set_style_text_color(lbl_alt, lv_color_white(), 0);
     lv_label_set_text(lbl_alt, "Alt: 0");
+
+    lbl_time = lv_label_create(parent);
+    lv_obj_align(lbl_time, LV_ALIGN_TOP_RIGHT, -4, 28);
+    lv_obj_set_style_text_color(lbl_time, lv_color_hex(0x888888), 0);
+    lv_label_set_text(lbl_time, "0.00s");
 
     lbl_warn = lv_label_create(parent);
     lv_obj_align(lbl_warn, LV_ALIGN_BOTTOM_MID, 0, -8);
@@ -326,6 +332,11 @@ static void update_hud(const GameState &gs) {
 
     lv_label_set_text_fmt(lbl_alt, "Alt: %d", (int)alt);
 
+    // Speed run timer
+    uint32_t secs = gs.elapsed_ms / 1000;
+    uint32_t ms = (gs.elapsed_ms % 1000) / 10;
+    lv_label_set_text_fmt(lbl_time, "%d.%02ds", secs, ms);
+
     // Warning for high speed near ground
     if (alt < 80 && spd > LN_MAX_LANDING_SPEED) {
         lv_label_set_text(lbl_warn, "! TOO FAST !");
@@ -366,6 +377,7 @@ void renderer_cleanup() {
     if (lbl_fuel) { lv_obj_del(lbl_fuel); lbl_fuel = NULL; }
     if (lbl_speed) { lv_obj_del(lbl_speed); lbl_speed = NULL; }
     if (lbl_alt) { lv_obj_del(lbl_alt); lbl_alt = NULL; }
+    if (lbl_time) { lv_obj_del(lbl_time); lbl_time = NULL; }
     if (lbl_warn) { lv_obj_del(lbl_warn); lbl_warn = NULL; }
     if (bar_fuel) { lv_obj_del(bar_fuel); bar_fuel = NULL; }
     if (canvas_buf) { free(canvas_buf); canvas_buf = NULL; }

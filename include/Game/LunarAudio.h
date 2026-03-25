@@ -20,5 +20,9 @@ void leds_landed();
 void leds_crashed();
 void leds_idle();
 void leds_fuel_gauge(float fuel, float max_fuel);
+void leds_team_color(uint8_t player_index);
+
+void audio_achievement();
+void leds_achievement();
 
 #endif

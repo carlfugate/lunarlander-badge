@@ -148,6 +148,39 @@ void audio_countdown(int seconds_left) {
     }
 }
 
+void leds_team_color(uint8_t player_index) {
+    static const uint32_t team_colors[] = {
+        0x0000FF, 0xFF0000, 0x00FF00, 0xFF00FF, 0xFFFF00, 0x00FFFF
+    };
+    uint32_t c = team_colors[player_index % 6];
+    uint8_t r = ((c >> 16) & 0xFF) / 7;
+    uint8_t g = ((c >> 8) & 0xFF) / 7;
+    uint8_t b = (c & 0xFF) / 7;
+    setAllPixels(packColor(r, g, b));
+}
+
+void audio_achievement() {
+    if (s_muted) return;
+    tone(BUZZER_PIN, 784, 80); delay(100);
+    tone(BUZZER_PIN, 1047, 80); delay(100);
+    delay(80);
+    tone(BUZZER_PIN, 1319, 300);
+    delay(350);
+    noTone(BUZZER_PIN);
+}
+
+void leds_achievement() {
+    for (int i = 0; i < NUM_NEOPIXELS; i++) {
+        setNeoPixelColor(i, Adafruit_NeoPixel::ColorHSV(i * 65536L / NUM_NEOPIXELS, 255, 200));
+        delay(100);
+    }
+    delay(200);
+    for (int i = 0; i < NUM_NEOPIXELS; i++)
+        setNeoPixelColor(i, Adafruit_NeoPixel::Color(255, 180, 0));
+    delay(1000);
+    clearNeoPixels();
+}
+
 #else // NATIVE_TEST stubs
 
 void audio_set_mute(bool) {}
@@ -169,5 +202,8 @@ void leds_idle()    {}
 void leds_fuel_gauge(float, float) {}
 void audio_boot() {}
 void audio_countdown(int) {}
+void leds_team_color(uint8_t) {}
+void audio_achievement() {}
+void leds_achievement() {}
 
 #endif
