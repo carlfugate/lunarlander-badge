@@ -413,6 +413,8 @@ static void ss_tick(lv_timer_t *t) {
     } else if (ss_mode == SS_MODE_LAVA) {
         scene_lava(buf, ss_scene_ticks++);
     }
+
+    lv_obj_invalidate(ss_canvas); // tell LVGL the canvas changed
 }
 
 static void ss_touch_cb(lv_event_t *e) {

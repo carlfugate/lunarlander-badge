@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BSidesKC Badge — Menu Concepts</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #050508;
+    color: #ccc;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    padding: 30px;
+  }
+
+  h1 {
+    text-align: center;
+    color: #00e5ff;
+    font-size: 18px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #555;
+    font-size: 12px;
+    margin-bottom: 30px;
+    letter-spacing: 2px;
+  }
+
+  .concepts {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .concept-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .concept-label {
+    color: #00e5ff;
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
+  .screen {
+    width: 640px;
+    height: 480px;
+    background: #0a0a0f;
+    border: 2px solid #1a1a2e;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 30px rgba(0, 229, 255, 0.05), inset 0 0 60px rgba(0,0,0,0.5);
+  }
+
+  /* ===== CONCEPT A: Flight Director ===== */
+  .a-telemetry {
+    background: #0d0d14;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: #00e5ff;
+    display: flex;
+    justify-content: space-between;
+    letter-spacing: 1px;
+    border-bottom: 1px solid #00e5ff33;
+  }
+  .a-telemetry .wifi-on { color: #00c853; }
+  .a-rule {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #00e5ff, transparent);
+    opacity: 0.6;
+  }
+  .a-main {
+    display: flex;
+    gap: 12px;
+    padding: 18px 16px 12px;
+  }
+  .a-btn-primary {
+    flex: 1;
+    height: 140px;
+    border: 2px solid;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    font-size: 18px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    position: relative;
+    transition: box-shadow 0.3s;
+  }
+  .a-btn-primary.lander {
+    border-color: #00c853;
+    color: #00c853;
+    background: #00c85310;
+    box-shadow: 0 0 15px #00c85320;
+  }
+  .a-btn-primary.lander:hover { box-shadow: 0 0 25px #00c85340; }
+  .a-btn-primary.schedule {
+    border-color: #448aff;
+    color: #448aff;
+    background: #448aff10;
+    box-shadow: 0 0 15px #448aff20;
+  }
+  .a-btn-primary.schedule:hover { box-shadow: 0 0 25px #448aff40; }
+  .a-btn-primary .icon { font-size: 36px; margin-bottom: 6px; }
+  .a-btn-primary .sublabel {
+    font-size: 10px;
+    opacity: 0.5;
+    letter-spacing: 2px;
+    margin-top: 4px;
+  }
+
+  .a-switches {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 0 16px;
+    margin-top: 4px;
+  }
+  .a-switch {
+    width: 88px;
+    height: 72px;
+    background: #0d0d18;
+    border: 1px solid #1a1a30;
+    border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .a-switch:hover {
+    border-color: #00e5ff55;
+    background: #00e5ff08;
+  }
+  .a-switch .sw-icon { font-size: 22px; margin-bottom: 4px; }
+  .a-switch .sw-label {
+    font-size: 9px;
+    color: #556;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .a-ticker-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 36px;
+    background: #08080e;
+    border-top: 1px solid #1a1a2e;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+  .a-ticker-panel .ticker-tag {
+    background: #00e5ff;
+    color: #0a0a0f;
+    font-size: 9px;
+    padding: 2px 6px;
+    letter-spacing: 1px;
+    font-weight: bold;
+    margin-left: 6px;
+    flex-shrink: 0;
+  }
+  .a-ticker-panel .ticker-text {
+    color: #00e5ff;
+    font-size: 12px;
+    white-space: nowrap;
+    animation: tickerScroll 20s linear infinite;
+    padding-left: 10px;
+  }
+
+  @keyframes tickerScroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* ===== CONCEPT B: CRT Terminal ===== */
+  .b-screen {
+    position: relative;
+  }
+  .b-screen::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 255, 0, 0.015) 2px,
+      rgba(0, 255, 0, 0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 10;
+  }
+  .b-screen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.4) 100%);
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .b-content {
+    padding: 16px 20px;
+    color: #00c853;
+    font-size: 14px;
+    line-height: 1.8;
+  }
+  .b-header {
+    color: #00e5ff;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .b-divider {
+    color: #00c85344;
+    margin-bottom: 10px;
+    font-size: 13px;
+    overflow: hidden;
+  }
+  .b-menu-item {
+    display: flex;
+    padding: 4px 0;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .b-menu-item:hover { color: #fff; }
+  .b-menu-item .cursor-col {
+    width: 24px;
+    color: #00e5ff;
+    flex-shrink: 0;
+  }
+  .b-menu-item .num { color: #00e5ff; }
+  .b-menu-item .dots { color: #00c85333; }
+  .b-menu-item .status { color: #00c853; margin-left: auto; }
+  .b-menu-item .status.armed { color: #00c853; }
+  .b-menu-item .status.blue { color: #448aff; }
+  .b-menu-item .status.yellow { color: #ffd600; }
+
+  .b-cursor-blink {
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .b-prompt {
+    margin-top: 16px;
+    color: #00c85366;
+    font-size: 13px;
+  }
+  .b-prompt span { color: #00c853; }
+
+  .b-stats {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid #00c85322;
+    font-size: 12px;
+    color: #00c85366;
+    display: flex;
+    gap: 20px;
+  }
+  .b-stats .val { color: #00c853; }
+
+  .b-ticker {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 8px 20px;
+    background: #060a06;
+    border-top: 1px solid #00c85322;
+    font-size: 11px;
+    color: #00c85355;
+    z-index: 5;
+  }
+  .b-ticker .time { color: #00c85366; }
+  .b-ticker div { margin-bottom: 2px; }
+
+  /* ===== CONCEPT C: Mission Control HUD ===== */
+  .c-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    font-size: 12px;
+    color: #889;
+    background: #0d0d14;
+  }
+  .c-topbar .brand { color: #fff; letter-spacing: 2px; font-size: 13px; }
+  .c-topbar .met { color: #00e5ff; }
+  .c-topbar .indicators { display: flex; gap: 12px; }
+  .c-topbar .ind-on { color: #00c853; }
+
+  .c-accent {
+    height: 2px;
+    background: linear-gradient(90deg, #00e5ff, #448aff, transparent);
+    opacity: 0.5;
+  }
+
+  .c-body {
+    display: flex;
+    padding: 14px;
+    gap: 12px;
+    height: 340px;
+  }
+  .c-left {
+    flex: 6;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .c-right {
+    flex: 4;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  .c-btn-big {
+    flex: 1;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-family: inherit;
+    font-size: 17px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    border: none;
+    transition: filter 0.2s;
+  }
+  .c-btn-big:hover { filter: brightness(1.2); }
+  .c-btn-big.lander {
+    background: linear-gradient(135deg, #00c853, #009624);
+    color: #fff;
+    box-shadow: 0 4px 20px #00c85330;
+  }
+  .c-btn-big.schedule {
+    background: linear-gradient(135deg, #448aff, #2962ff);
+    color: #fff;
+    box-shadow: 0 4px 20px #448aff30;
+  }
+  .c-btn-big .btn-icon { font-size: 28px; }
+  .c-btn-big .btn-sub {
+    font-size: 9px;
+    opacity: 0.7;
+    letter-spacing: 1px;
+    display: block;
+    margin-top: 2px;
+  }
+
+  .c-small-btn {
+    background: #12121e;
+    border: 1px solid #1e1e35;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    color: #889;
+  }
+  .c-small-btn:hover {
+    border-color: #00e5ff44;
+    background: #00e5ff08;
+    color: #aab;
+  }
+  .c-small-btn .sb-icon { font-size: 20px; margin-bottom: 3px; }
+  .c-small-btn .sb-label { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; }
+
+  .c-data-panel {
+    margin: 0 14px;
+    padding: 8px 12px;
+    background: #0d0d14;
+    border: 1px solid #1a1a2e;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #556;
+    display: flex;
+    justify-content: space-between;
+    letter-spacing: 1px;
+  }
+  .c-data-panel .val { color: #00e5ff; }
+
+  .c-ticker {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    background: #08080e;
+    border-top: 1px solid #1a1a2e;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    font-size: 11px;
+    color: #00e5ff88;
+  }
+  .c-ticker .scroll {
+    white-space: nowrap;
+    animation: tickerScroll 22s linear infinite;
+    padding-left: 640px;
+  }
+</style>
+</head>
+<body>
+
+<h1>BSidesKC '26 Badge — Menu Concepts</h1>
+<p class="subtitle">320×240 at 2× scale &nbsp;|&nbsp; NASA Telemetry Terminal Aesthetic</p>
+
+<div class="concepts">
+
+<!-- ==================== CONCEPT A ==================== -->
+<div class="concept-wrapper">
+  <div class="concept-label">A: Flight Director Console</div>
+  <div class="screen">
+    <div class="a-telemetry">
+      <span>MET 02:14:07</span>
+      <span>WIFI:<span class="wifi-on">ON</span></span>
+      <span>CREW:EAGLE</span>
+      <span>★ 2450</span>
+    </div>
+    <div class="a-rule"></div>
+    <div class="a-main">
+      <div class="a-btn-primary lander">
+        <div class="icon">🚀</div>
+        LANDER
+        <div class="sublabel">PLAY MISSION</div>
+      </div>
+      <div class="a-btn-primary schedule">
+        <div class="icon">📋</div>
+        SCHEDULE
+        <div class="sublabel">CON EVENTS</div>
+      </div>
+    </div>
+    <div class="a-switches">
+      <div class="a-switch">
+        <div class="sw-icon">✨</div>
+        <div class="sw-label">Bling</div>
+      </div>
+      <div class="a-switch">
+        <div class="sw-icon">📡</div>
+        <div class="sw-label">WiFi</div>
+      </div>
+      <div class="a-switch">
+        <div class="sw-icon">🏅</div>
+        <div class="sw-label">Badges</div>
+      </div>
+      <div class="a-switch">
+        <div class="sw-icon">📜</div>
+        <div class="sw-label">Credits</div>
+      </div>
+      <div class="a-switch">
+        <div class="sw-icon">⚙️</div>
+        <div class="sw-label">Settings</div>
+      </div>
+      <div class="a-switch">
+        <div class="sw-icon">🧑‍🚀</div>
+        <div class="sw-label">Callsign</div>
+      </div>
+    </div>
+    <div class="a-ticker-panel">
+      <div class="ticker-tag">FEED</div>
+      <div class="ticker-text">
+        WELCOME TO BSidesKC 2026 — LUNAR LANDER CHALLENGE ACTIVE — NEXT TALK: FIRMWARE EXPLOITATION 101 @ MAIN STAGE 14:30 — BADGE TRADING OPEN IN LOBBY — CTF SCOREBOARD UPDATED —&nbsp;&nbsp;&nbsp;
+        WELCOME TO BSidesKC 2026 — LUNAR LANDER CHALLENGE ACTIVE — NEXT TALK: FIRMWARE EXPLOITATION 101 @ MAIN STAGE 14:30 — BADGE TRADING OPEN IN LOBBY — CTF SCOREBOARD UPDATED
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== CONCEPT B ==================== -->
+<div class="concept-wrapper">
+  <div class="concept-label">B: CRT Terminal</div>
+  <div class="screen b-screen">
+    <div class="b-content">
+      <div class="b-header">&gt; BSidesKC_2026 // MET 02:14:07 // CREW:EAGLE</div>
+      <div class="b-divider">════════════════════════════════════════════════</div>
+
+      <div class="b-menu-item">
+        <span class="cursor-col"><span class="b-cursor-blink">&gt;</span></span>
+        <span><span class="num">[1]</span> LUNAR LANDER <span class="dots">.............</span></span>
+        <span class="status armed">ARMED</span>
+      </div>
+      <div class="b-menu-item">
+        <span class="cursor-col">&nbsp;</span>
+        <span><span class="num">[2]</span> SCHEDULE <span class="dots">.................</span></span>
+        <span class="status blue">LOADED</span>
+      </div>
+      <div class="b-menu-item">
+        <span class="cursor-col">&nbsp;</span>
+        <span><span class="num">[3]</span> BLING <span class="dots">....................</span></span>
+        <span class="status">STANDBY</span>
+      </div>
+      <div class="b-menu-item">
+        <span class="cursor-col">&nbsp;</span>
+        <span><span class="num">[4]</span> WIFI <span class="dots">.....................</span></span>
+        <span class="status armed">CONNECTED</span>
+      </div>
+      <div class="b-menu-item">
+        <span class="cursor-col">&nbsp;</span>
+        <span><span class="num">[5]</span> BADGES <span class="dots">..................</span></span>
+        <span class="status yellow">3/8</span>
+      </div>
+      <div class="b-menu-item">
+        <span class="cursor-col">&nbsp;</span>
+        <span><span class="num">[6]</span> SETTINGS <span class="dots">.................</span></span>
+        <span class="status">NOMINAL</span>
+      </div>
+      <div class="b-menu-item">
+        <span class="cursor-col">&nbsp;</span>
+        <span><span class="num">[7]</span> CREDITS <span class="dots">..................</span></span>
+        <span class="status">—</span>
+      </div>
+      <div class="b-menu-item">
+        <span class="cursor-col">&nbsp;</span>
+        <span><span class="num">[8]</span> CALLSIGN <span class="dots">.................</span></span>
+        <span class="status">EAGLE</span>
+      </div>
+
+      <div class="b-prompt">&gt; SELECT OPTION <span class="b-cursor-blink">█</span></div>
+
+      <div class="b-stats">
+        <span>SCORE: <span class="val">2450</span></span>
+        <span>GAMES: <span class="val">7</span></span>
+        <span>PATCHES: <span class="val">3/8</span></span>
+        <span>UPLINK: <span class="val">OK</span></span>
+      </div>
+    </div>
+
+    <div class="b-ticker">
+      <div><span class="time">[02:14:02]</span> BADGE_SCAN: New badge detected — COLUMBIA</div>
+      <div><span class="time">[02:13:58]</span> SCHEDULE: Next talk in 26 min — Main Stage</div>
+      <div><span class="time">[02:13:41]</span> LANDER: High score updated — EAGLE 2450</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== CONCEPT C ==================== -->
+<div class="concept-wrapper">
+  <div class="concept-label">C: Mission Control HUD</div>
+  <div class="screen">
+    <div class="c-topbar">
+      <span class="brand">BSidesKC '26</span>
+      <span class="met">MET 02:14:07</span>
+      <div class="indicators">
+        <span class="ind-on">WiFi ●</span>
+        <span>🔋 87%</span>
+      </div>
+    </div>
+    <div class="c-accent"></div>
+    <div class="c-body">
+      <div class="c-left">
+        <div class="c-btn-big lander">
+          <span class="btn-icon">🚀</span>
+          <div>LANDER<span class="btn-sub">PLAY MISSION</span></div>
+        </div>
+        <div class="c-btn-big schedule">
+          <span class="btn-icon">📋</span>
+          <div>SCHEDULE<span class="btn-sub">CON EVENTS</span></div>
+        </div>
+      </div>
+      <div class="c-right">
+        <div class="c-small-btn"><span class="sb-icon">✨</span><span class="sb-label">Bling</span></div>
+        <div class="c-small-btn"><span class="sb-icon">📡</span><span class="sb-label">WiFi</span></div>
+        <div class="c-small-btn"><span class="sb-icon">🏅</span><span class="sb-label">Badges</span></div>
+        <div class="c-small-btn"><span class="sb-icon">📜</span><span class="sb-label">Credits</span></div>
+        <div class="c-small-btn"><span class="sb-icon">⚙️</span><span class="sb-label">Settings</span></div>
+        <div class="c-small-btn"><span class="sb-icon">🧑‍🚀</span><span class="sb-label">Callsign</span></div>
+      </div>
+    </div>
+    <div class="c-data-panel">
+      <span>CREW: <span class="val">EAGLE</span></span>
+      <span>GAMES: <span class="val">7</span></span>
+      <span>BEST: <span class="val">2450</span></span>
+      <span>PATCHES: <span class="val">3/8</span></span>
+    </div>
+    <div class="c-ticker">
+      <div class="scroll">
+        ◆ WELCOME TO BSidesKC 2026 &nbsp;&nbsp; ◆ LUNAR LANDER CHALLENGE ACTIVE &nbsp;&nbsp; ◆ NEXT TALK: FIRMWARE EXPLOITATION 101 @ 14:30 &nbsp;&nbsp; ◆ BADGE TRADING OPEN IN LOBBY &nbsp;&nbsp; ◆ CTF SCOREBOARD UPDATED &nbsp;&nbsp;
+        ◆ WELCOME TO BSidesKC 2026 &nbsp;&nbsp; ◆ LUNAR LANDER CHALLENGE ACTIVE &nbsp;&nbsp; ◆ NEXT TALK: FIRMWARE EXPLOITATION 101 @ 14:30 &nbsp;&nbsp; ◆ BADGE TRADING OPEN IN LOBBY &nbsp;&nbsp; ◆ CTF SCOREBOARD UPDATED
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /concepts -->
+
+</body>
+</html>
