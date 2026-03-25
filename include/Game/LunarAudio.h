@@ -11,6 +11,7 @@ void audio_thrust_stop();
 void audio_landed();
 void audio_crashed();
 void audio_low_fuel();
+void audio_altitude_warning(float altitude);
 
 void leds_thrust();
 void leds_landed();

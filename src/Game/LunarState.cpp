@@ -161,6 +161,9 @@ static void multiplayer_tick_cb(lv_timer_t *t) {
     leds_fuel_gauge(gs.lander.fuel, LN_INITIAL_FUEL);
 
     if (gs.phase == PHASE_PLAYING) {
+        // Altitude warning beeps
+        float alt = gs.terrain.zone_y - gs.lander.y;
+        audio_altitude_warning(alt);
         renderer_draw(gs);
         if (gs.lander.fuel < 100.0f && gs.lander.fuel > 0.0f) {
             static uint32_t last_beep = 0;
@@ -287,6 +290,10 @@ static void game_tick_cb(lv_timer_t *t) {
             last_beep = millis();
         }
     }
+
+    // Altitude warning beeps
+    float alt = gs.terrain.zone_y - gs.lander.y;
+    audio_altitude_warning(alt);
 
     renderer_draw(gs);
 

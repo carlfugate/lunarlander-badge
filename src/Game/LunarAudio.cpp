@@ -38,7 +38,7 @@ void audio_click_back() {
 
 void audio_thrust_start() {
     if (s_muted) return;
-    tone(BUZZER_PIN, 200);
+    tone(BUZZER_PIN, 150);
 }
 void audio_thrust_stop()  { noTone(BUZZER_PIN); }
 
@@ -66,6 +66,23 @@ void audio_low_fuel() {
     tone(BUZZER_PIN, 1000);
     delay(50);
     noTone(BUZZER_PIN);
+}
+
+static uint32_t last_alt_beep = 0;
+
+void audio_altitude_warning(float altitude) {
+    if (s_muted) return;
+    if (altitude > 80 || altitude < 0) return;
+    uint32_t now = millis();
+    uint32_t interval;
+    if (altitude < 10) interval = 150;
+    else if (altitude < 25) interval = 250;
+    else if (altitude < 50) interval = 500;
+    else interval = 1000;
+    if (now - last_alt_beep >= interval) {
+        tone(BUZZER_PIN, 1000, 40);
+        last_alt_beep = now;
+    }
 }
 
 // --- LEDs ---
@@ -122,6 +139,7 @@ void audio_thrust_stop()  {}
 void audio_landed()       {}
 void audio_crashed()      {}
 void audio_low_fuel()     {}
+void audio_altitude_warning(float) {}
 
 void leds_thrust()  {}
 void leds_landed()  {}
