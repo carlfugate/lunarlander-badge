@@ -916,6 +916,7 @@ void create_main_menu(bool show_ota_check) {
                 if (ota_timer) { lv_timer_del(ota_timer); ota_timer = nullptr; }
                 lv_obj_clean(main_menu);
                 display_main_menu_buttons();
+                screensaver_start_timer();
             }, LV_EVENT_CLICKED, NULL);
             lv_obj_t *sl = lv_label_create(skip);
             lv_label_set_text(sl, "Skip");
@@ -929,6 +930,7 @@ void create_main_menu(bool show_ota_check) {
         }
     }
     display_main_menu_buttons();
+    screensaver_start_timer();
 }
 
 //----------------------------------------------------
