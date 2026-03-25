@@ -32,3 +32,6 @@ Thumbs.db
 
 # Simulator binary
 sim/lunarlander_sim
+
+# Soak test logs
+tests/hardware/logs/*.log
