@@ -12,6 +12,7 @@
 #include "QA/Callsign.h"
 #include "QA/Achievements.h"
 #include "QA/Reminder.h"
+#include "QA/BlePresence.h"
 
 void create_checkin_window();
 void create_credits_window();
@@ -812,8 +813,8 @@ void display_main_menu_buttons() {
         // Update data panel
         if (data_label) {
             lv_label_set_text_fmt(data_label,
-                "CREW: %-8s | GAMES: %d | PATCHES: %d/%d",
-                callsign_get(), achievements_games_played(),
+                "CREW:%-8s | NEARBY:%d | PATCHES:%d/%d",
+                callsign_get(), ble_presence_nearby_count(),
                 achievements_total(), ACH_COUNT);
         }
     }, 1000, NULL);
@@ -889,13 +890,15 @@ void display_main_menu_buttons() {
     lv_obj_set_style_radius(data_bg, 4, 0);
     lv_obj_set_style_pad_all(data_bg, 0, 0);
     lv_obj_clear_flag(data_bg, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(data_bg, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(data_bg, [](lv_event_t *e) { create_crew_log_window(); }, LV_EVENT_CLICKED, NULL);
 
     data_label = lv_label_create(data_bg);
     lv_obj_set_style_text_font(data_label, &lv_font_unscii_8, 0);
     lv_obj_set_style_text_color(data_label, lv_color_hex(0x00e5ff), 0);
     lv_label_set_text_fmt(data_label,
-        "CREW: %-8s | GAMES: %d | PATCHES: %d/%d",
-        callsign_get(), achievements_games_played(),
+        "CREW:%-8s | NEARBY:%d | PATCHES:%d/%d",
+        callsign_get(), ble_presence_nearby_count(),
         achievements_total(), ACH_COUNT);
     lv_obj_align(data_label, LV_ALIGN_LEFT_MID, 4, 0);
 

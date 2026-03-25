@@ -7,6 +7,7 @@
 #include "Hardware/BadgeRegistration.h" // For badge registration
 #include "QA/Callsign.h"
 #include "QA/Achievements.h"
+#include "QA/BlePresence.h"
 
 #define CONF_WIFI_SSID "BSidesKC-2026"
 #define CONF_WIFI_PASS "Ad_Astra_2026"
@@ -175,6 +176,9 @@ void setup() {
 
     // Load achievements from SD
     achievements_init();
+
+    // Initialize BLE presence system
+    ble_presence_init(callsign_get(), 0);
 
     // Initialize boot button
     pinMode(BOOT_BUTTON_PIN, INPUT_PULLUP);

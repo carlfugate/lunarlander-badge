@@ -1,0 +1,27 @@
+#ifndef QA_BLE_PRESENCE_H
+#define QA_BLE_PRESENCE_H
+
+#include <stdint.h>
+
+#define BLE_MAX_CREW 100
+#define BLE_CALLSIGN_LEN 10
+
+struct CrewEntry {
+    char callsign[BLE_CALLSIGN_LEN + 1];
+    uint16_t high_score;
+    int8_t rssi;
+    uint32_t first_seen_met;  // MET seconds when first discovered
+    uint32_t last_seen_ms;    // millis() of last sighting
+    bool new_discovery;       // true on first frame only
+};
+
+void ble_presence_init(const char *my_callsign, uint16_t my_score);
+void ble_presence_update_score(uint16_t score);
+void ble_presence_set_status(uint8_t status); // 0=idle, 1=playing, 2=menu
+int ble_presence_nearby_count();  // badges seen in last 30s
+int ble_presence_total_count();   // total unique badges ever seen
+const CrewEntry* ble_presence_get_crew();
+int ble_presence_get_crew_count();
+void create_crew_log_window();
+
+#endif
