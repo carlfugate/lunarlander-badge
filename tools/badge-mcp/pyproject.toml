@@ -1,0 +1,9 @@
+[project]
+name = "badge-test-mcp"
+version = "0.1.0"
+description = "MCP server for ESP32 badge hardware testing via serial"
+requires-python = ">=3.10"
+dependencies = ["mcp>=1.0.0", "pyserial>=3.5"]
+
+[project.scripts]
+badge-test-mcp = "server:main"
