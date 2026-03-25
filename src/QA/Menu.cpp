@@ -602,7 +602,11 @@ void create_system_info_window() {
         codeVersion.c_str(), codeName.c_str(), macAddress.c_str(), registrationStatus.c_str(), lastCheckin.c_str(), wifiSSID.c_str(),
         totalHeap, freeHeap, usedHeap, memoryUsagePercent);
 
+    lv_obj_set_scroll_dir(SystemWindow, LV_DIR_VER);
+
     lv_obj_t * label = lv_label_create(SystemWindow);
+    lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(label, 300);
     lv_label_set_text(label, buf);
     lv_obj_set_style_text_color(label, lv_color_hex(0xcccccc), 0);
     lv_obj_set_style_text_font(label, &lv_font_unscii_8, 0);

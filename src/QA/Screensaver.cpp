@@ -128,7 +128,6 @@ static void scene_lunar(uint16_t *buf, int tick) {
                     buf[py_*W+px_] = land ? 0x0600 : 0x001F;
                 }
             }
-    if (ey < H) for (int x = 200; x < W; x++) px(buf, x, 220, 0x4208);
     // Orbiter
     static float oa = 0; oa += 0.02f; if (oa > 6.283f) oa -= 6.283f;
     for (int dy = -8; dy <= 8; dy++)

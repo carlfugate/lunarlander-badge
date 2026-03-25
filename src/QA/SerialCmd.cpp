@@ -68,6 +68,7 @@ static void test_handler(const char *args) {
             lv_timer_handler();
             create_main_menu(false);
             lv_timer_handler();
+            serial_cmd_poll();
             if (i % 10 == 0)
                 serial_cmd_log("TEST", "stress progress=%d/%d heap=%d", i, cycles, ESP.getFreeHeap());
         }
@@ -80,6 +81,7 @@ static void test_handler(const char *args) {
         uint32_t start_heap = ESP.getFreeHeap();
         while (millis() - start < (uint32_t)ms) {
             lv_timer_handler();
+            serial_cmd_poll();
             delay(5);
         }
         serial_cmd_log("TEST", "idle complete ms=%d heap_start=%d heap_end=%d delta=%d",
