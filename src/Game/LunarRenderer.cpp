@@ -82,25 +82,29 @@ void renderer_init(lv_obj_t *parent) {
     lv_canvas_set_buffer(canvas, canvas_buf, LN_SCREEN_W, LN_SCREEN_H, LV_COLOR_FORMAT_RGB565);
     lv_obj_set_pos(canvas, 0, 0);
 
-    // HUD labels
+    // HUD labels (monospace font for stable numeric display)
     lbl_fuel = lv_label_create(parent);
     lv_obj_set_pos(lbl_fuel, 4, 4);
     lv_obj_set_style_text_color(lbl_fuel, lv_color_white(), 0);
+    lv_obj_set_style_text_font(lbl_fuel, &lv_font_unscii_8, 0);
     lv_label_set_text(lbl_fuel, "Fuel: 100%");
 
     lbl_speed = lv_label_create(parent);
     lv_obj_set_pos(lbl_speed, 4, 20);
     lv_obj_set_style_text_color(lbl_speed, lv_color_white(), 0);
+    lv_obj_set_style_text_font(lbl_speed, &lv_font_unscii_8, 0);
     lv_label_set_text(lbl_speed, "Spd: 0.0");
 
     lbl_alt = lv_label_create(parent);
     lv_obj_set_pos(lbl_alt, 4, 36);
     lv_obj_set_style_text_color(lbl_alt, lv_color_white(), 0);
+    lv_obj_set_style_text_font(lbl_alt, &lv_font_unscii_8, 0);
     lv_label_set_text(lbl_alt, "Alt: 0");
 
     lbl_time = lv_label_create(parent);
     lv_obj_align(lbl_time, LV_ALIGN_TOP_RIGHT, -4, 28);
     lv_obj_set_style_text_color(lbl_time, lv_color_hex(0x888888), 0);
+    lv_obj_set_style_text_font(lbl_time, &lv_font_unscii_8, 0);
     lv_label_set_text(lbl_time, "0.00s");
 
     lbl_warn = lv_label_create(parent);
@@ -370,6 +374,15 @@ void renderer_draw(const GameState &gs) {
     draw_touch_controls();
     draw_lander(gs.lander);
     update_hud(gs);
+
+    // CRT scanline overlay — subtract ~12.5% brightness on even rows
+    uint16_t *buf = (uint16_t *)canvas_buf;
+    for (int y = 0; y < LN_SCREEN_H; y += 2) {
+        for (int x = 0; x < LN_SCREEN_W; x++) {
+            uint16_t &px = buf[y * LN_SCREEN_W + x];
+            px = px - ((px >> 3) & 0x18E3);
+        }
+    }
 }
 
 void renderer_cleanup() {

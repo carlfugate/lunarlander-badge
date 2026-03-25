@@ -51,6 +51,26 @@ static void ss_tick(lv_timer_t *t) {
         shoot_x -= 6; shoot_y += 2;
         shoot_timer--;
     }
+
+    // Earthrise — small Earth rising from bottom-right
+    static int16_t earth_y = 260;
+    earth_y--;
+    if (earth_y < 160) earth_y = 260;
+    const int16_t ex = 260, r = 20;
+    for (int dy = -r; dy <= r; dy++) {
+        for (int dx = -r; dx <= r; dx++) {
+            if (dx * dx + dy * dy <= r * r) {
+                int px = ex + dx, py = earth_y + dy;
+                if (px >= 0 && px < 320 && py >= 0 && py < 240) {
+                    bool land = ((dx + dy) % 7 == 0) || ((dx * 3 + dy * 2) % 11 == 0);
+                    buf[py * 320 + px] = land ? 0x0600 : 0x001F;
+                }
+            }
+        }
+    }
+    // Lunar horizon
+    for (int x = 200; x < 320; x++)
+        if (220 < 240) buf[220 * 320 + x] = 0x4208;
 }
 
 static void ss_touch_cb(lv_event_t *e) {
