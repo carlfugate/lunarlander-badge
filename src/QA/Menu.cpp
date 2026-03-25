@@ -854,7 +854,7 @@ void display_main_menu_buttons() {
         {LV_SYMBOL_TINT,     "Bling",  [](lv_event_t *e) { create_bling_window(); }},
         {LV_SYMBOL_WIFI,     "WiFi",   [](lv_event_t *e) { create_wifi_window(); }},
         {LV_SYMBOL_OK,       "Badge",  [](lv_event_t *e) { create_achievements_window(); }},
-        {LV_SYMBOL_FILE,     "Info",   [](lv_event_t *e) { create_credits_window(); }},
+        {LV_SYMBOL_FILE,     "Comms", [](lv_event_t *e) { create_comms_window(); }},
         {LV_SYMBOL_SETTINGS, "Gear",   [](lv_event_t *e) { create_system_submenu(); }},
         {LV_SYMBOL_EYE_OPEN, "Card",   [](lv_event_t *e) { create_badge_card_window(); }},
     };
