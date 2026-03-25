@@ -130,3 +130,27 @@ void achievements_increment_games() {
 }
 
 #endif
+
+#ifdef FF_SERIAL_TEST
+#include "QA/SerialCmd.h"
+static void ach_serial_handler(const char *args) {
+    if (strcmp(args, "list") == 0) {
+        serial_cmd_log("ACH", "total=%d/%d", achievements_total(), ACH_COUNT);
+        for (int i = 0; i < ACH_COUNT; i++)
+            Serial.printf("  %d: %s\n", i, achievement_unlocked(i) ? "UNLOCKED" : "locked");
+    } else if (strncmp(args, "unlock ", 7) == 0) {
+        int id = atoi(args + 7);
+        achievement_unlock(id);
+        serial_cmd_log("ACH", "unlocked=%d", id);
+    } else if (strcmp(args, "status") == 0) {
+        serial_cmd_log("ACH", "total=%d/%d games=%d", achievements_total(), ACH_COUNT, achievements_games_played());
+    } else {
+        serial_cmd_log("ACH", "error=unknown args=%s", args);
+    }
+}
+void serial_register_achievements() {
+    serial_cmd_register("achievements", ach_serial_handler, "list, unlock <id>, status");
+}
+#else
+void serial_register_achievements() {}
+#endif

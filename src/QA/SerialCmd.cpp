@@ -4,18 +4,28 @@
 
 #include <Arduino.h>
 #include <lvgl.h>
-#include <stdarg.h>
 #include <string.h>
-#include "Hardware/BadgeVersion.h"
-#include "QA/Menu.h"
-#include "QA/Bling.hpp"
-#include "QA/Callsign.h"
-#include "QA/Achievements.h"
-#include "QA/BlePresence.h"
-#include "Game/LunarState.h"
+#include <stdarg.h>
+#include "Includes.h"
+
+#define MAX_HANDLERS 24
+
+static struct {
+    const char *prefix;
+    serial_cmd_handler_t handler;
+    const char *help_text;
+} s_handlers[MAX_HANDLERS];
+static int s_handler_count = 0;
 
 static char cmd_buf[128];
 static int cmd_pos = 0;
+
+void serial_cmd_register(const char *prefix, serial_cmd_handler_t handler, const char *help_text) {
+    if (s_handler_count < MAX_HANDLERS) {
+        s_handlers[s_handler_count] = {prefix, handler, help_text};
+        s_handler_count++;
+    }
+}
 
 void serial_cmd_log(const char *tag, const char *fmt, ...) {
     Serial.printf("[%s] ", tag);
@@ -27,108 +37,120 @@ void serial_cmd_log(const char *tag, const char *fmt, ...) {
     Serial.println(buf);
 }
 
-static void cmd_heap() {
-    serial_cmd_log("HEAP", "free=%d min=%d",
-        ESP.getFreeHeap(), ESP.getMinFreeHeap());
-}
-
-static void cmd_nav(const char *screen) {
-    if (strcmp(screen, "main") == 0) { create_main_menu(false); }
-    else if (strcmp(screen, "system") == 0) { create_system_submenu(); }
-    else if (strcmp(screen, "bling") == 0) { create_bling_window(); }
-    else if (strcmp(screen, "callsign") == 0) { create_callsign_window(); }
-    else if (strcmp(screen, "achievements") == 0) { create_achievements_window(); }
-    else if (strcmp(screen, "crew") == 0) { create_crew_log_window(); }
-    else if (strcmp(screen, "comms") == 0) { create_comms_window(); }
-    else if (strcmp(screen, "game") == 0) { lunar_lander_start(); }
-    else { serial_cmd_log("NAV", "error=unknown_screen screen=%s", screen); return; }
-    serial_cmd_log("NAV", "screen=%s heap=%d", screen, ESP.getFreeHeap());
-}
-
-static void cmd_tap(int x, int y) {
-    lv_obj_t *scr = lv_scr_act();
-    if (scr) {
-        lv_obj_send_event(scr, LV_EVENT_PRESSED, NULL);
-        lv_obj_send_event(scr, LV_EVENT_CLICKED, NULL);
+// Built-in: sys module
+static void sys_handler(const char *args) {
+    if (strcmp(args, "heap") == 0) {
+        serial_cmd_log("SYS", "free=%d min=%d", ESP.getFreeHeap(), ESP.getMinFreeHeap());
+    } else if (strcmp(args, "version") == 0) {
+        serial_cmd_log("SYS", "firmware=%s codename=%s", BADGE_VERSION, BADGE_CODE_NAME);
+    } else if (strcmp(args, "uptime") == 0) {
+        serial_cmd_log("SYS", "ms=%lu", millis());
+    } else if (strcmp(args, "reboot") == 0) {
+        serial_cmd_log("SYS", "rebooting");
+        Serial.flush();
+        ESP.restart();
+    } else {
+        serial_cmd_log("SYS", "error=unknown args=%s", args);
     }
-    serial_cmd_log("TAP", "x=%d y=%d", x, y);
 }
 
-static void cmd_state() {
-    serial_cmd_log("STATE", "heap=%d min_heap=%d uptime=%lu",
-        ESP.getFreeHeap(), ESP.getMinFreeHeap(), millis());
-}
-
-static void cmd_stress(int cycles) {
-    serial_cmd_log("STRESS", "starting cycles=%d", cycles);
-    uint32_t start_heap = ESP.getFreeHeap();
-    for (int i = 0; i < cycles; i++) {
-        create_main_menu(false);
-        lv_timer_handler();
-        create_system_submenu();
-        lv_timer_handler();
-        create_main_menu(false);
-        lv_timer_handler();
-        if (i % 10 == 0) {
-            serial_cmd_log("STRESS", "progress=%d/%d heap=%d", i, cycles, ESP.getFreeHeap());
+// Built-in: test module
+static void test_handler(const char *args) {
+    if (strncmp(args, "stress ", 7) == 0) {
+        int cycles = atoi(args + 7);
+        if (cycles <= 0) cycles = 10;
+        serial_cmd_log("TEST", "stress starting cycles=%d", cycles);
+        uint32_t start_heap = ESP.getFreeHeap();
+        extern void create_main_menu(bool);
+        extern void create_system_submenu();
+        for (int i = 0; i < cycles; i++) {
+            create_system_submenu();
+            lv_timer_handler();
+            create_main_menu(false);
+            lv_timer_handler();
+            if (i % 10 == 0)
+                serial_cmd_log("TEST", "stress progress=%d/%d heap=%d", i, cycles, ESP.getFreeHeap());
         }
+        serial_cmd_log("TEST", "stress complete cycles=%d heap_start=%d heap_end=%d delta=%d",
+            cycles, start_heap, ESP.getFreeHeap(), (int)ESP.getFreeHeap() - (int)start_heap);
+    } else if (strncmp(args, "idle ", 5) == 0) {
+        int ms = atoi(args + 5);
+        serial_cmd_log("TEST", "idle starting ms=%d", ms);
+        uint32_t start = millis();
+        uint32_t start_heap = ESP.getFreeHeap();
+        while (millis() - start < (uint32_t)ms) {
+            lv_timer_handler();
+            delay(5);
+        }
+        serial_cmd_log("TEST", "idle complete ms=%d heap_start=%d heap_end=%d delta=%d",
+            ms, start_heap, ESP.getFreeHeap(), (int)ESP.getFreeHeap() - (int)start_heap);
+    } else {
+        serial_cmd_log("TEST", "error=unknown args=%s", args);
     }
-    serial_cmd_log("STRESS", "complete cycles=%d heap_start=%d heap_end=%d delta=%d",
-        cycles, start_heap, ESP.getFreeHeap(), (int)ESP.getFreeHeap() - (int)start_heap);
 }
 
-static void cmd_idle(int ms) {
-    serial_cmd_log("IDLE", "starting ms=%d", ms);
-    uint32_t start = millis();
-    uint32_t start_heap = ESP.getFreeHeap();
-    while (millis() - start < (uint32_t)ms) {
-        lv_timer_handler();
-        delay(5);  // OK here — this IS the main loop context
+// Built-in: help
+static void help_handler(const char *args) {
+    if (args[0] == '\0') {
+        serial_cmd_log("HELP", "modules=%d", s_handler_count);
+        for (int i = 0; i < s_handler_count; i++)
+            Serial.printf("  %s -- %s\n", s_handlers[i].prefix, s_handlers[i].help_text);
+    } else {
+        for (int i = 0; i < s_handler_count; i++) {
+            if (strcmp(args, s_handlers[i].prefix) == 0) {
+                serial_cmd_log("HELP", "module=%s commands=%s", s_handlers[i].prefix, s_handlers[i].help_text);
+                return;
+            }
+        }
+        serial_cmd_log("HELP", "error=unknown_module module=%s", args);
     }
-    serial_cmd_log("IDLE", "complete ms=%d heap_start=%d heap_end=%d delta=%d",
-        ms, start_heap, ESP.getFreeHeap(), (int)ESP.getFreeHeap() - (int)start_heap);
-}
-
-static void cmd_version() {
-    serial_cmd_log("VERSION", "firmware=%s codename=%s", BADGE_VERSION, BADGE_CODE_NAME);
-}
-
-static void cmd_reboot() {
-    serial_cmd_log("REBOOT", "rebooting");
-    Serial.flush();
-    ESP.restart();
 }
 
 static void process_command(char *cmd) {
     while (*cmd == ' ') cmd++;
     char *end = cmd + strlen(cmd) - 1;
     while (end > cmd && (*end == ' ' || *end == '\r' || *end == '\n')) *end-- = '\0';
-
     if (strlen(cmd) == 0) return;
 
-    if (strcmp(cmd, "heap") == 0) { cmd_heap(); }
-    else if (strcmp(cmd, "state") == 0) { cmd_state(); }
-    else if (strcmp(cmd, "version") == 0) { cmd_version(); }
-    else if (strcmp(cmd, "reboot") == 0) { cmd_reboot(); }
-    else if (strncmp(cmd, "nav ", 4) == 0) { cmd_nav(cmd + 4); }
-    else if (strncmp(cmd, "tap ", 4) == 0) {
-        int x, y;
-        if (sscanf(cmd + 4, "%d %d", &x, &y) == 2) cmd_tap(x, y);
-        else serial_cmd_log("ERROR", "usage: tap <x> <y>");
+    for (int i = 0; i < s_handler_count; i++) {
+        int plen = strlen(s_handlers[i].prefix);
+        if (strncmp(cmd, s_handlers[i].prefix, plen) == 0) {
+            if (cmd[plen] == '\0') {
+                s_handlers[i].handler("");
+                return;
+            } else if (cmd[plen] == '.' || cmd[plen] == ' ') {
+                s_handlers[i].handler(cmd + plen + 1);
+                return;
+            }
+        }
     }
-    else if (strncmp(cmd, "stress ", 7) == 0) { cmd_stress(atoi(cmd + 7)); }
-    else if (strncmp(cmd, "idle ", 5) == 0) { cmd_idle(atoi(cmd + 5)); }
-    else if (strcmp(cmd, "back") == 0) { create_main_menu(false); serial_cmd_log("NAV", "screen=main heap=%d", ESP.getFreeHeap()); }
-    else if (strcmp(cmd, "help") == 0) {
-        Serial.println("[HELP] Commands: heap, state, version, reboot, nav <screen>, tap <x> <y>, stress <n>, idle <ms>, back, help");
-        Serial.println("[HELP] Screens: main, system, bling, callsign, achievements, crew, comms, game");
-    }
-    else { serial_cmd_log("ERROR", "unknown command: %s", cmd); }
+    serial_cmd_log("ERROR", "unknown_command cmd=%s", cmd);
 }
+
+// External module registration functions
+extern void serial_register_nav();
+extern void serial_register_bling();
+extern void serial_register_ble();
+extern void serial_register_callsign();
+extern void serial_register_audio();
+extern void serial_register_screensaver();
+extern void serial_register_achievements();
 
 void serial_cmd_init() {
     cmd_pos = 0;
-    serial_cmd_log("INIT", "serial_test_harness ready firmware=%s", BADGE_VERSION);
+    serial_cmd_register("sys", sys_handler, "heap, version, uptime, reboot");
+    serial_cmd_register("test", test_handler, "stress <n>, idle <ms>");
+    serial_cmd_register("help", help_handler, "[module] - list commands");
+
+    serial_register_nav();
+    serial_register_bling();
+    serial_register_ble();
+    serial_register_callsign();
+    serial_register_audio();
+    serial_register_screensaver();
+    serial_register_achievements();
+
+    serial_cmd_log("INIT", "bstp_v1 ready firmware=%s handlers=%d", BADGE_VERSION, s_handler_count);
 }
 
 void serial_cmd_poll() {

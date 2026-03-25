@@ -152,3 +152,22 @@ void create_callsign_window() {
     lv_obj_set_style_text_color(bl, lv_color_hex(0x888888), 0);
     lv_obj_center(bl);
 }
+
+#ifdef FF_SERIAL_TEST
+#include "QA/SerialCmd.h"
+static void callsign_serial_handler(const char *args) {
+    if (strcmp(args, "get") == 0) {
+        serial_cmd_log("CALLSIGN", "name=%s", callsign_get());
+    } else if (strncmp(args, "set ", 4) == 0) {
+        callsign_set(args + 4);
+        serial_cmd_log("CALLSIGN", "name=%s", callsign_get());
+    } else {
+        serial_cmd_log("CALLSIGN", "error=unknown args=%s", args);
+    }
+}
+void serial_register_callsign() {
+    serial_cmd_register("callsign", callsign_serial_handler, "get, set <name>");
+}
+#else
+void serial_register_callsign() {}
+#endif

@@ -1150,4 +1150,34 @@ void create_checkin_window() {
     create_back_button(checkin_window);
 }
 
-// ...existing code...
+#ifdef FF_SERIAL_TEST
+#include "QA/SerialCmd.h"
+static void nav_handler(const char *args) {
+    if (strcmp(args, "main") == 0) create_main_menu(false);
+    else if (strcmp(args, "system") == 0) create_system_submenu();
+    else if (strcmp(args, "battery") == 0) create_battery_window();
+    else if (strcmp(args, "buzzer") == 0) create_buzzer_window();
+    else if (strcmp(args, "sd") == 0) create_sd_card_window();
+    else if (strcmp(args, "info") == 0) create_system_info_window();
+    else if (strcmp(args, "ota") == 0) create_ota_window();
+    else if (strcmp(args, "credits") == 0) create_credits_window();
+    else if (strcmp(args, "card") == 0) create_badge_card_window();
+    else if (strcmp(args, "screensaver") == 0) create_screensaver_picker();
+    else if (strcmp(args, "checkin") == 0) create_checkin_window();
+    else if (strcmp(args, "bling") == 0) { extern void create_bling_window(); create_bling_window(); }
+    else if (strcmp(args, "wifi") == 0) { create_wifi_window(); }
+    else if (strcmp(args, "callsign") == 0) { extern void create_callsign_window(); create_callsign_window(); }
+    else if (strcmp(args, "achievements") == 0) { extern void create_achievements_window(); create_achievements_window(); }
+    else if (strcmp(args, "crew") == 0) { extern void create_crew_log_window(); create_crew_log_window(); }
+    else if (strcmp(args, "comms") == 0) { extern void create_comms_window(); create_comms_window(); }
+    else if (strcmp(args, "game") == 0) { extern void lunar_lander_start(); lunar_lander_start(); }
+    else if (strcmp(args, "schedule") == 0) { extern void displaySchedule(); displaySchedule(); }
+    else { serial_cmd_log("NAV", "error=unknown screen=%s", args); return; }
+    serial_cmd_log("NAV", "screen=%s heap=%d", args, ESP.getFreeHeap());
+}
+void serial_register_nav() {
+    serial_cmd_register("nav", nav_handler, "main, system, battery, buzzer, sd, info, ota, credits, card, screensaver, checkin, bling, wifi, callsign, achievements, crew, comms, game, schedule");
+}
+#else
+void serial_register_nav() {}
+#endif

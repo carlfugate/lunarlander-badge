@@ -475,3 +475,29 @@ void screensaver_stop() {
     ss_screen = NULL;
     ss_active = false;
 }
+
+#ifdef FF_SERIAL_TEST
+#include "QA/SerialCmd.h"
+static void screensaver_serial_handler(const char *args) {
+    if (strncmp(args, "mode ", 5) == 0) {
+        int m = atoi(args + 5);
+        screensaver_set_mode((ScreensaverMode)m);
+        serial_cmd_log("SCREENSAVER", "mode=%d", m);
+    } else if (strcmp(args, "trigger") == 0) {
+        screensaver_stop();
+        screensaver_reset_timer();
+        serial_cmd_log("SCREENSAVER", "timer_reset");
+    } else if (strcmp(args, "status") == 0) {
+        serial_cmd_log("SCREENSAVER", "mode=%d", (int)screensaver_get_mode());
+    } else if (strcmp(args, "list") == 0) {
+        serial_cmd_log("SCREENSAVER", "0=ad_astra 1=matrix 2=terminal 3=lava");
+    } else {
+        serial_cmd_log("SCREENSAVER", "error=unknown args=%s", args);
+    }
+}
+void serial_register_screensaver() {
+    serial_cmd_register("screensaver", screensaver_serial_handler, "mode <n>, trigger, status, list");
+}
+#else
+void serial_register_screensaver() {}
+#endif
