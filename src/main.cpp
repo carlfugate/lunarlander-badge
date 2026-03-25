@@ -6,6 +6,9 @@
 #include "Hardware/RotaryEncoder_Module.h"
 #include "Hardware/BadgeRegistration.h" // For badge registration
 
+#define CONF_WIFI_SSID "BSidesKC-2026"
+#define CONF_WIFI_PASS "Ad_Astra_2026"
+
 #define TFT_HOR_RES   240
 #define TFT_VER_RES   320
 #define TFT_ROTATION  LV_DISPLAY_ROTATION_270
@@ -185,6 +188,11 @@ void setup() {
     displayBootStatusLine("> Time sync ............  [OK]");
     displayBootComplete(true);
 #else
+    // Auto-connect to conference WiFi
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(CONF_WIFI_SSID, CONF_WIFI_PASS);
+    // Don't block — let it connect in background
+
     tft.println("> Comms link ...........");
     scanWiFiNetworks();
     bool wifiConnected = connectToWiFiWithResult();

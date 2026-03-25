@@ -694,6 +694,12 @@ void display_main_menu_buttons() {
             for (int i = 0; i < NUM_NEOPIXELS; i++) setNeoPixelColor(i, 0xFFFFFF);
         } else if (answer_shown && elapsed > 14520 && elapsed <= 14525) {
             // Hold easter egg text for 5 seconds
+        } else if (elapsed > 28800) { // 8 hours = party time
+            static uint8_t party_hue = 0;
+            party_hue += 3;
+            lv_obj_set_style_text_color(met_label,
+                lv_color_hsv_to_rgb(party_hue, 100, 100), 0);
+            lv_label_set_text(met_label, LV_SYMBOL_AUDIO " PARTY");
         } else {
             if (answer_shown && elapsed > 14525) answer_shown = false;
             lv_label_set_text_fmt(met_label, "MET %02lu:%02lu:%02lu", h, m, s);
