@@ -850,12 +850,12 @@ void display_main_menu_buttons() {
 
     // === Right column: 2x3 icon grid ===
     struct { const char *icon; const char *name; lv_event_cb_t cb; } grid[] = {
-        {LV_SYMBOL_TINT,     "Bling",    [](lv_event_t *e) { create_bling_window(); }},
-        {LV_SYMBOL_WIFI,     "WiFi",     [](lv_event_t *e) { create_wifi_window(); }},
-        {LV_SYMBOL_OK,       "Badges",   [](lv_event_t *e) { create_achievements_window(); }},
-        {LV_SYMBOL_FILE,     "Credits",  [](lv_event_t *e) { create_credits_window(); }},
-        {LV_SYMBOL_SETTINGS, "Settings", [](lv_event_t *e) { create_system_submenu(); }},
-        {LV_SYMBOL_EYE_OPEN, "My Card",  [](lv_event_t *e) { create_badge_card_window(); }},
+        {LV_SYMBOL_TINT,     "Bling",  [](lv_event_t *e) { create_bling_window(); }},
+        {LV_SYMBOL_WIFI,     "WiFi",   [](lv_event_t *e) { create_wifi_window(); }},
+        {LV_SYMBOL_OK,       "Badge",  [](lv_event_t *e) { create_achievements_window(); }},
+        {LV_SYMBOL_FILE,     "Info",   [](lv_event_t *e) { create_credits_window(); }},
+        {LV_SYMBOL_SETTINGS, "Gear",   [](lv_event_t *e) { create_system_submenu(); }},
+        {LV_SYMBOL_EYE_OPEN, "Card",   [](lv_event_t *e) { create_badge_card_window(); }},
     };
     for (int i = 0; i < 6; i++) {
         int col = i % 2, row = i / 2;

@@ -90,6 +90,35 @@ static void bling_aurora() {
     }
 }
 
+// Comet - single bright LED chases with fading tail
+static void bling_comet() {
+    static int pos = 0;
+    pos = (pos + 1) % (NUM_NEOPIXELS * 3);
+    for (int i = 0; i < NUM_NEOPIXELS; i++) {
+        int dist = (pos / 3) - i;
+        if (dist < 0) dist += NUM_NEOPIXELS;
+        if (dist == 0) setNeoPixelColor(i, Adafruit_NeoPixel::Color(255, 255, 255));
+        else if (dist == 1) setNeoPixelColor(i, Adafruit_NeoPixel::Color(100, 100, 255));
+        else if (dist == 2) setNeoPixelColor(i, Adafruit_NeoPixel::Color(20, 20, 80));
+        else setNeoPixelColor(i, 0);
+    }
+}
+
+// Fire - flickering warm colors
+static void bling_fire() {
+    for (int i = 0; i < NUM_NEOPIXELS; i++) {
+        uint8_t r = 180 + random(75);
+        uint8_t g = random(80);
+        setNeoPixelColor(i, Adafruit_NeoPixel::Color(r, g, 0));
+    }
+}
+
+// Sparkle - random single LED flashes white
+static void bling_sparkle() {
+    for (int i = 0; i < NUM_NEOPIXELS; i++) setNeoPixelColor(i, 0);
+    setNeoPixelColor(random(NUM_NEOPIXELS), Adafruit_NeoPixel::Color(255, 255, 255));
+}
+
 static void bling_off() {
     clearNeoPixels();
 }
@@ -153,6 +182,9 @@ static void bling_animate() {
         case 6: bling_breathing(); break;
         case 7: bling_aurora(); break;
         case 8: bling_morse(); break;
+        case 9: bling_comet(); break;
+        case 10: bling_fire(); break;
+        case 11: bling_sparkle(); break;
         default: bling_off(); break;
     }
 }
@@ -183,15 +215,15 @@ void create_bling_window() {
     lv_obj_clear_flag(line, LV_OBJ_FLAG_SCROLLABLE);
 
     static const struct { const char *name; int mode; } modes[] = {
-        {"Rainbow",  1}, {"Police",  2}, {"Blink",   3},
-        {"Chase",    4}, {"Random",  5}, {"Breathe", 6},
-        {"Aurora",   7}, {"Morse",   8}, {"Off",     0},
+        {"Rainbow",  1}, {"Police",  2}, {"Blink",   3}, {"Chase",   4},
+        {"Random",   5}, {"Breathe", 6}, {"Aurora",   7}, {"Morse",   8},
+        {"Comet",    9}, {"Fire",   10}, {"Sparkle", 11}, {"Off",     0},
     };
 
-    for (int i = 0; i < 9; i++) {
+    for (int i = 0; i < 12; i++) {
         lv_obj_t *btn = lv_btn_create(scr);
-        lv_obj_set_size(btn, 100, 48);
-        lv_obj_set_pos(btn, 4 + (i % 3) * 106, 26 + (i / 3) * 52);
+        lv_obj_set_size(btn, 74, 48);
+        lv_obj_set_pos(btn, 4 + (i % 4) * 78, 26 + (i / 4) * 52);
         lv_obj_set_style_bg_color(btn, lv_color_hex(0x1a1a2e), 0);
         lv_obj_set_style_radius(btn, 6, 0);
         lv_obj_add_event_cb(btn, [](lv_event_t *e) {
