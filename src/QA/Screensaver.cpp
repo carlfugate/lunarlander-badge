@@ -3,11 +3,18 @@
 #include <lvgl.h>
 #include <math.h>
 
+#ifndef NATIVE_TEST
+#include <esp_sleep.h>
+#include "pins.h"
+#endif
+
 static lv_timer_t *ss_timer = NULL;
 static lv_obj_t *ss_screen = NULL;
 static lv_obj_t *ss_canvas = NULL;
 static uint8_t *ss_buf = NULL;
 static bool ss_active = false;
+
+static int ss_sleep_ticks = 0;
 
 #define SS_NUM_STARS 60
 static int16_t star_x[SS_NUM_STARS];
@@ -24,6 +31,15 @@ static void init_stars() {
 
 static void ss_tick(lv_timer_t *t) {
     if (!ss_canvas) return;
+
+#ifndef NATIVE_TEST
+    ss_sleep_ticks++;
+    if (ss_sleep_ticks > 6000) { // 6000 ticks * 50ms = 300 seconds
+        esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0); // Boot button, active low
+        esp_deep_sleep_start();
+    }
+#endif
+
     lv_canvas_fill_bg(ss_canvas, lv_color_black(), LV_OPA_COVER);
     uint16_t *buf = (uint16_t *)ss_buf;
     for (int i = 0; i < SS_NUM_STARS; i++) {
@@ -126,6 +142,7 @@ static void ss_timeout_cb(lv_timer_t *t) {
     load_screen_and_delete_old(ss_screen);
     init_stars();
     ss_active = true;
+    ss_sleep_ticks = 0;
     ss_timer = lv_timer_create(ss_tick, 50, NULL);
 }
 

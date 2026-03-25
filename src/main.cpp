@@ -6,6 +6,7 @@
 #include "Hardware/RotaryEncoder_Module.h"
 #include "Hardware/BadgeRegistration.h" // For badge registration
 #include "QA/Callsign.h"
+#include "QA/Achievements.h"
 
 #define CONF_WIFI_SSID "BSidesKC-2026"
 #define CONF_WIFI_PASS "Ad_Astra_2026"
@@ -171,6 +172,9 @@ void setup() {
 
     // Load callsign from SD
     callsign_init();
+
+    // Load achievements from SD
+    achievements_init();
 
     // Initialize boot button
     pinMode(BOOT_BUTTON_PIN, INPUT_PULLUP);

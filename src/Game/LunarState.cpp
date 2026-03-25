@@ -76,6 +76,7 @@ uint16_t game_calc_score(const GameState &gs) {
 #include <lvgl.h>
 #include <Arduino.h>
 #include <WiFi.h>
+#include <math.h>
 #include "Game/LunarRenderer.h"
 #include "Game/LunarInput.h"
 #include "Game/LunarAudio.h"
@@ -84,6 +85,7 @@ uint16_t game_calc_score(const GameState &gs) {
 #include "Game/LunarScoreboard.h"
 #include "QA/Menu.h"
 #include "QA/Bling.hpp"
+#include "QA/Achievements.h"
 
 static GameState gs;
 static Scoreboard scoreboard;
@@ -532,6 +534,17 @@ static void show_game_over() {
     if (gs.phase == PHASE_LANDED && gs.score > 0) {
         rank = scoreboard_add(scoreboard, gs.score, gs.difficulty);
         scoreboard_save(scoreboard);
+    }
+
+    // Achievement checks
+    achievements_increment_games();
+    if (gs.phase == PHASE_LANDED) {
+        achievement_unlock(ACH_FIRST_LANDING);
+        if (gs.score > 5000) achievement_unlock(ACH_EAGLE_SCOUT);
+        if (gs.lander.fuel < LN_INITIAL_FUEL * 0.01f) achievement_unlock(ACH_APOLLO_13);
+        if (gs.elapsed_ms < 30000) achievement_unlock(ACH_SPEEDRUNNER);
+        if (fabsf(gs.lander.vy) < 0.5f) achievement_unlock(ACH_PERFECT);
+        if (gs.difficulty == 2) achievement_unlock(ACH_HARD_MODE);
     }
 
     lv_obj_t *result = lv_label_create(game_screen);

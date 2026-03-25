@@ -10,6 +10,7 @@
 #include "Game/LunarAudio.h"
 #include "QA/Screensaver.h"
 #include "QA/Callsign.h"
+#include "QA/Achievements.h"
 #include "QA/Reminder.h"
 
 void create_checkin_window();
@@ -904,7 +905,7 @@ void display_main_menu_buttons() {
         {LV_SYMBOL_TINT " Bling",   lv_color_hex(0x614385), lv_color_hex(0x516395), [](lv_event_t *e) { create_bling_window(); }},
         {LV_SYMBOL_WIFI " WiFi",    lv_color_hex(0x11998e), lv_color_hex(0x38ef7d), [](lv_event_t *e) { create_wifi_window(); }},
         {LV_SYMBOL_FILE " Credits", lv_color_hex(0xf7971e), lv_color_hex(0xffe259), [](lv_event_t *e) { create_credits_window(); }},
-        {LV_SYMBOL_EYE_OPEN " CTF", lv_color_hex(0xff512f), lv_color_hex(0xdd2476), nullptr},
+        {LV_SYMBOL_EYE_OPEN " Badges", lv_color_hex(0xff512f), lv_color_hex(0xdd2476), [](lv_event_t *e) { create_achievements_window(); }},
         {LV_SYMBOL_SETTINGS,         lv_color_hex(0x333333), lv_color_hex(0x555555), [](lv_event_t *e) { create_system_submenu(); }},
     };
     for (int i = 0; i < 6; i++) {
