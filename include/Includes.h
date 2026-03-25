@@ -30,3 +30,4 @@
 extern bool ledStatus;
 extern int ledPins[];  // Declaration of the LED pins array (size inferred from the definition)
 extern int numLeds;
+extern uint32_t badge_boot_ms;

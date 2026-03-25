@@ -14,6 +14,8 @@
 #define DRAW_BUF_SIZE (TFT_HOR_RES * TFT_VER_RES / 10 * (LV_COLOR_DEPTH / 16))
 uint32_t draw_buf[DRAW_BUF_SIZE / 4];
 
+uint32_t badge_boot_ms = 0;
+
 // Create MAX17048 object
 Adafruit_MAX17048 max17048;
 bool max17048_available = false;  // Track if MAX17048 is actually available
@@ -211,6 +213,8 @@ void setup() {
 #endif
     delay(1500);
     // --- End themed boot display ---
+
+    badge_boot_ms = millis();
 
     // Remove all old boot/status messages
 

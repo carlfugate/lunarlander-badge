@@ -8,6 +8,7 @@
 #include "Hardware/BadgeVersion.h"
 #include "Game/LunarState.h"
 #include "Game/LunarAudio.h"
+#include "QA/Screensaver.h"
 
 void create_checkin_window();
 void create_credits_window();
