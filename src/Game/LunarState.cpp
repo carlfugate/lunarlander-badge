@@ -624,10 +624,7 @@ void lunar_lander_stop() {
     audio_thrust_stop();
     leds_idle();
     renderer_cleanup();
-    if (game_screen) {
-        lv_obj_del(game_screen);
-        game_screen = NULL;
-    }
+    game_screen = NULL;
     was_thrusting = false;
     create_main_menu(false);
 }
