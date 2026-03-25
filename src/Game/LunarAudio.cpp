@@ -44,19 +44,19 @@ void audio_thrust_stop()  { noTone(BUZZER_PIN); }
 
 void audio_landed() {
     if (s_muted) return;
-    uint16_t notes[] = {440, 554, 659};
-    for (int i = 0; i < 3; i++) {
-        tone(BUZZER_PIN, notes[i]);
-        delay(150);
+    uint16_t melody[] = {523, 659, 784, 1047, 1319}; // C5-E5-G5-C6-E6
+    for (int i = 0; i < 5; i++) {
+        tone(BUZZER_PIN, melody[i], 80);
+        delay(100);
     }
     noTone(BUZZER_PIN);
 }
 
 void audio_crashed() {
     if (s_muted) return;
-    for (uint16_t f = 400; f >= 100; f -= 30) {
-        tone(BUZZER_PIN, f);
-        delay(50);
+    for (uint16_t f = 800; f >= 100; f -= 50) {
+        tone(BUZZER_PIN, f, 20);
+        delay(20);
     }
     noTone(BUZZER_PIN);
 }
@@ -127,6 +127,27 @@ void leds_crashed() {
 
 void leds_idle() { clearNeoPixels(); }
 
+void audio_boot() {
+    if (s_muted) return;
+    uint16_t notes[] = {262, 330, 392, 523}; // C4-E4-G4-C5
+    for (int i = 0; i < 4; i++) {
+        tone(BUZZER_PIN, notes[i], 100);
+        delay(120);
+    }
+    noTone(BUZZER_PIN);
+}
+
+void audio_countdown(int seconds_left) {
+    if (s_muted) return;
+    if (seconds_left <= 0) {
+        tone(BUZZER_PIN, 2000, 500);
+    } else if (seconds_left <= 3) {
+        tone(BUZZER_PIN, 1500, 100);
+    } else if (seconds_left <= 10) {
+        tone(BUZZER_PIN, 1000, 80);
+    }
+}
+
 #else // NATIVE_TEST stubs
 
 void audio_set_mute(bool) {}
@@ -146,5 +167,7 @@ void leds_landed()  {}
 void leds_crashed() {}
 void leds_idle()    {}
 void leds_fuel_gauge(float, float) {}
+void audio_boot() {}
+void audio_countdown(int) {}
 
 #endif
