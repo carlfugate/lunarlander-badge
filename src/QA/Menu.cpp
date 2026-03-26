@@ -278,8 +278,10 @@ void create_battery_window() {
     
     if (max17048_available) {
         bat_cent = max17048.cellPercent();
+        if (bat_cent > 100) bat_cent = 100;
+        if (bat_cent < 0) bat_cent = 0;
         bat_volt = max17048.cellVoltage();
-        snprintf(buf, sizeof(buf), "Battery: %.2f%%\nVoltage: %.2fV", bat_cent, bat_volt);
+        snprintf(buf, sizeof(buf), "Battery: %.0f%%\nVoltage: %.2fV", bat_cent, bat_volt);
     } else {
         snprintf(buf, sizeof(buf), "Battery Monitor\nNot Available\n\nCheck Hardware");
     }

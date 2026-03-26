@@ -196,9 +196,8 @@ void setup() {
     // Initialize boot button
     pinMode(BOOT_BUTTON_PIN, INPUT_PULLUP);
     
-    // Initialize buzzer pin
-    pinMode(BUZZER_PIN, OUTPUT);
-    digitalWrite(BUZZER_PIN, LOW);
+    // Initialize buzzer via LEDC (pinMode conflicts with tone())
+    noTone(BUZZER_PIN);
 
     // --- Themed boot display ---
     displayBootTerminalHeader();

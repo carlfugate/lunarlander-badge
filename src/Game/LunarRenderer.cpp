@@ -21,7 +21,6 @@ int16_t world_to_screen_y(float wy, const Camera &cam) {
 
 #ifndef NATIVE_TEST
 
-#include <esp_heap_caps.h>
 #include <Arduino.h>
 
 #define NUM_STARS 40
@@ -75,8 +74,7 @@ void renderer_init(lv_obj_t *parent) {
     // Allocate canvas buffer — try SPIRAM first, fall back to regular heap
     size_t buf_size = LN_SCREEN_W * LN_SCREEN_H * 2;
     Serial.printf("[RENDERER] need=%d heap=%d max_block=%d\n", buf_size, ESP.getFreeHeap(), ESP.getMaxAllocHeap());
-    canvas_buf = (uint8_t *)heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
-    if (!canvas_buf) canvas_buf = (uint8_t *)malloc(buf_size);
+    canvas_buf = (uint8_t *)malloc(buf_size);
     Serial.printf("[RENDERER] canvas_buf=%p heap=%d\n", canvas_buf, ESP.getFreeHeap());
     if (!canvas_buf) {
         Serial.println("[RENDERER] FAILED - not enough contiguous memory");
