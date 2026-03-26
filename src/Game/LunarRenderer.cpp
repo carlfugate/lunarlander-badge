@@ -24,6 +24,8 @@ int16_t world_to_screen_y(float wy, const Camera &cam) {
 #include <esp_heap_caps.h>
 #include <Arduino.h>
 
+uint8_t *g_canvas_buf = NULL;
+
 #define NUM_STARS 40
 #define LANDER_SIZE 8
 
@@ -72,12 +74,14 @@ void renderer_init(lv_obj_t *parent) {
     generate_stars();
     cam = {0, 0, 0, 0, 0};
 
-    // Allocate canvas buffer — try PSRAM first
+    // Allocate canvas buffer — use pre-reserved g_canvas_buf if available
     size_t buf_size = LN_SCREEN_W * LN_SCREEN_H * 2;
     Serial.printf("[RENDERER] need=%d heap=%d max_block=%d\n", buf_size, ESP.getFreeHeap(), ESP.getMaxAllocHeap());
-    canvas_buf = (uint8_t *)heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
-    if (!canvas_buf) {
-        canvas_buf = (uint8_t *)malloc(buf_size);
+    if (g_canvas_buf) {
+        canvas_buf = g_canvas_buf;
+    } else {
+        canvas_buf = (uint8_t *)heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
+        if (!canvas_buf) canvas_buf = (uint8_t *)malloc(buf_size);
     }
     Serial.printf("[RENDERER] canvas_buf=%p heap=%d\n", canvas_buf, ESP.getFreeHeap());
     if (!canvas_buf) {
@@ -422,7 +426,7 @@ void renderer_cleanup() {
     lbl_time = NULL;
     lbl_warn = NULL;
     bar_fuel = NULL;
-    if (canvas_buf) { free(canvas_buf); canvas_buf = NULL; }
+    if (canvas_buf) { canvas_buf = NULL; }
     stars_generated = false;
 }
 

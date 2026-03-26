@@ -380,7 +380,6 @@ static void diff_btn_cb(lv_event_t *e) {
 }
 
 static void start_game(uint8_t difficulty) {
-    ble_presence_stop();  // free ~35KB for canvas
     Serial.printf("[DEBUG] start_game diff=%d heap=%d max_block=%d\n",
         difficulty, ESP.getFreeHeap(), ESP.getMaxAllocHeap());
     lv_obj_clean(game_screen);
@@ -621,7 +620,6 @@ void lunar_lander_stop() {
     renderer_cleanup();
     game_screen = NULL;
     was_thrusting = false;
-    ble_presence_restart();
     create_main_menu(false);
 }
 #endif
