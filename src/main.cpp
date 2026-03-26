@@ -186,14 +186,10 @@ void setup() {
     achievements_init();
     Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "achievements_init", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 
-    // Reserve canvas buffer before BLE fragments the heap
-    extern uint8_t *g_canvas_buf;
-    g_canvas_buf = (uint8_t *)malloc(320 * 240 * 2);
-    Serial.printf("[BOOT] %-20s heap=%d buf=%p\n", "canvas_reserved", ESP.getFreeHeap(), g_canvas_buf);
-
-    // Initialize BLE presence system
-    ble_presence_init(callsign_get(), 0);
-    Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "ble_presence_init", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
+    // BLE disabled — causes heap fragmentation preventing game canvas allocation.
+    // See issue #88. Social features (presence, crew roster, comms) backlogged.
+    // ble_presence_init(callsign_get(), 0);
+    Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "ble_skipped", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 
     serial_cmd_init();
 

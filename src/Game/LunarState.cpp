@@ -86,7 +86,6 @@ uint16_t game_calc_score(const GameState &gs) {
 #include "QA/Menu.h"
 #include "QA/Bling.hpp"
 #include "QA/Achievements.h"
-#include "QA/BlePresence.h"
 
 static GameState gs;
 static Scoreboard scoreboard;
