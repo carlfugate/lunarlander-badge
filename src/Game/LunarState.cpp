@@ -86,6 +86,7 @@ uint16_t game_calc_score(const GameState &gs) {
 #include "QA/Menu.h"
 #include "QA/Bling.hpp"
 #include "QA/Achievements.h"
+#include "QA/BlePresence.h"
 
 static GameState gs;
 static Scoreboard scoreboard;
@@ -379,7 +380,9 @@ static void diff_btn_cb(lv_event_t *e) {
 }
 
 static void start_game(uint8_t difficulty) {
-    Serial.printf("[DEBUG] start_game diff=%d mode=%d\n", difficulty, gs.mode);
+    ble_presence_stop();  // free ~35KB for canvas
+    Serial.printf("[DEBUG] start_game diff=%d heap=%d max_block=%d\n",
+        difficulty, ESP.getFreeHeap(), ESP.getMaxAllocHeap());
     lv_obj_clean(game_screen);
     // Force offline — online solo requires a running game server
     gs.mode = MODE_OFFLINE;
@@ -618,6 +621,7 @@ void lunar_lander_stop() {
     renderer_cleanup();
     game_screen = NULL;
     was_thrusting = false;
+    ble_presence_restart();
     create_main_menu(false);
 }
 #endif

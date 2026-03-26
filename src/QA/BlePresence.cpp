@@ -240,6 +240,25 @@ const char* ble_presence_get_message_text(uint8_t msg_id) {
     return preset_messages[msg_id];
 }
 
+void ble_presence_stop() {
+    if (scan_timer) { lv_timer_del(scan_timer); scan_timer = NULL; }
+    BLEDevice::deinit(true);
+    pScan = NULL;
+    s_scanning = false;
+}
+
+void ble_presence_restart() {
+    if (pScan) return;  // already running
+    BLEDevice::init("BSidesKC");
+    pScan = BLEDevice::getScan();
+    pScan->setAdvertisedDeviceCallbacks(&scanCb, true);
+    pScan->setActiveScan(false);
+    pScan->setInterval(100);
+    pScan->setWindow(50);
+    start_advertising();
+    scan_timer = lv_timer_create(scan_tick, 10000, NULL);
+}
+
 bool ble_presence_has_notification() { return s_has_notification; }
 const char* ble_presence_get_notification() { return s_last_notification; }
 void ble_presence_clear_notification() { s_has_notification = false; }
@@ -388,6 +407,8 @@ void create_crew_log_window() {}
 void ble_presence_send_message(uint8_t) {}
 const char* ble_presence_get_message_text(uint8_t) { return ""; }
 void create_comms_window() {}
+void ble_presence_stop() {}
+void ble_presence_restart() {}
 
 bool ble_presence_has_notification() { return false; }
 const char* ble_presence_get_notification() { return ""; }

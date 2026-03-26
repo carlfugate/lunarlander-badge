@@ -31,6 +31,9 @@ void ble_presence_send_message(uint8_t msg_id);
 const char* ble_presence_get_message_text(uint8_t msg_id);
 void create_comms_window();
 
+void ble_presence_stop();
+void ble_presence_restart();
+
 bool ble_presence_has_notification();
 const char* ble_presence_get_notification();
 void ble_presence_clear_notification();
