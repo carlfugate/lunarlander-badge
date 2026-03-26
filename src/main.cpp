@@ -69,6 +69,7 @@ void setup() {
     Serial.begin(115200);
 
     while (!Serial);
+    Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "start", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
     
     // Suppress I2C errors for prototype hardware with unreliable connections
     esp_log_level_set("*", ESP_LOG_WARN);  // Set all logs to warning or higher
@@ -78,6 +79,7 @@ void setup() {
 
    // Initiating the LVGL library
    lv_init();
+   Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "lv_init", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 
    /*Set a tick source so that LVGL will know how much time elapsed. */
    lv_tick_set_cb(my_tick);
@@ -90,6 +92,7 @@ void setup() {
    lv_display_t * disp;
    /*TFT_eSPI can be enabled lv_conf.h to initialize the display in a simple way*/
    disp = lv_tft_espi_create(TFT_HOR_RES, TFT_VER_RES, draw_buf, sizeof(draw_buf));
+   Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "tft_espi_create", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 
    /*Initialize the (dummy) input device driver*/
    lv_indev_t * indev = lv_indev_create();
@@ -128,6 +131,7 @@ void setup() {
 
     // Initialize the touch screen module
     Screen_Module_InitTouch();
+    Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "touch_init", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 
     // Initialize buttons with pull-up resistors
     pinMode(BUTTON_ENTER_PIN, INPUT_PULLUP);
@@ -148,6 +152,7 @@ void setup() {
     // Initialize the NeoPixels LED
     initStatusLED();    // Initialize NeoPixels on GPIO18
     initNeoPixels();
+    Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "neopixel_init", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 
     // Initialize SPI for SD card with custom pins
     hspi.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
@@ -168,18 +173,22 @@ void setup() {
     } else {
         Serial.println("No SD card detected. Please insert an SD card.");
     }
+    Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "sd_card_init", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 
     // Initialize rotary encoder
     RotaryEncoder_Module_Init();
 
     // Load callsign from SD
     callsign_init();
+    Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "callsign_init", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 
     // Load achievements from SD
     achievements_init();
+    Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "achievements_init", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 
     // Initialize BLE presence system
     ble_presence_init(callsign_get(), 0);
+    Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "ble_presence_init", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 
     serial_cmd_init();
 
@@ -206,6 +215,7 @@ void setup() {
     // Auto-connect to conference WiFi
     WiFi.mode(WIFI_STA);
     WiFi.begin(CONF_WIFI_SSID, CONF_WIFI_PASS);
+    Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "wifi_begin", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
     // Don't block — let it connect in background
 
     tft.println("> Comms link ...........");
@@ -243,6 +253,8 @@ void setup() {
 
     // Initialize Main Menu
     create_main_menu();  // Show the OTA update check
+    Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "create_main_menu", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
+    Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "setup_complete", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 }
 
 void loop() {
