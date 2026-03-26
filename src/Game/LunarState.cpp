@@ -379,22 +379,11 @@ static void diff_btn_cb(lv_event_t *e) {
 }
 
 static void start_game(uint8_t difficulty) {
+    Serial.printf("[DEBUG] start_game diff=%d mode=%d\n", difficulty, gs.mode);
     lv_obj_clean(game_screen);
-    if (gs.mode == MODE_ONLINE_SOLO) {
-        net_init();
-        if (net_connect_player()) {
-            net_send_start(difficulty);
-            game_init(gs, difficulty, (uint32_t)millis());
-            gs.mode = MODE_ONLINE_SOLO;
-            gs.phase = PHASE_WAITING;
-            gs.start_ms = millis();
-        } else {
-            gs.mode = MODE_OFFLINE;
-            game_init(gs, difficulty, (uint32_t)millis());
-        }
-    } else {
-        game_init(gs, difficulty, (uint32_t)millis());
-    }
+    // Force offline — online solo requires a running game server
+    gs.mode = MODE_OFFLINE;
+    game_init(gs, difficulty, (uint32_t)millis());
     input_init();
     renderer_init(game_screen);
     was_thrusting = false;
@@ -490,11 +479,13 @@ static void show_difficulty_select() {
         lv_obj_t *lbl = lv_label_create(btn);
         lv_label_set_text(lbl, labels[i]);
         lv_obj_center(lbl);
+        /* DEBUG: temporarily disabled difficulty lock
         if (i > max_unlocked_difficulty) {
             lv_obj_set_style_bg_color(btn, lv_color_hex(0x222222), 0);
             lv_obj_set_style_text_color(lv_obj_get_child(btn, 0), lv_color_hex(0x444444), 0);
             lv_obj_clear_flag(btn, LV_OBJ_FLAG_CLICKABLE);
         }
+        */
     }
 
     // Mode toggle label
