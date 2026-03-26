@@ -587,6 +587,8 @@ static void show_game_over() {
     lv_obj_center(ml);
 }
 
+const GameState* game_get_state() { return &gs; }
+
 void lunar_lander_start() {
     stop_menu_timers();
     bling_stop_animation();

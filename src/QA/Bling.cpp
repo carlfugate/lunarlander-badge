@@ -248,6 +248,9 @@ void create_bling_window() {
     lv_obj_center(bl);
 }
 
+void bling_set_mode(int mode) { start_bling_animation(mode); }
+int bling_get_mode() { return bling_mode; }
+
 #ifdef FF_SERIAL_TEST
 #include "QA/SerialCmd.h"
 static void bling_serial_handler(const char *args) {

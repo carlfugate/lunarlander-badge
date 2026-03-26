@@ -9,4 +9,7 @@ void create_bling_window();
 // Stop bling animation and clear LEDs (safe to call from any context)
 void bling_stop_animation();
 
+void bling_set_mode(int mode);
+int bling_get_mode();
+
 #endif // QA_BLING_HPP
