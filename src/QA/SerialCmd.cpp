@@ -19,6 +19,7 @@ static int s_handler_count = 0;
 
 static char cmd_buf[128];
 static int cmd_pos = 0;
+static uint32_t s_loop_count = 0, s_loop_rate = 0, s_loop_last = 0;
 
 void serial_cmd_register(const char *prefix, serial_cmd_handler_t handler, const char *help_text) {
     if (s_handler_count < MAX_HANDLERS) {
@@ -40,15 +41,22 @@ void serial_cmd_log(const char *tag, const char *fmt, ...) {
 // Built-in: sys module
 static void sys_handler(const char *args) {
     if (strcmp(args, "heap") == 0) {
-        serial_cmd_log("SYS", "free=%d min=%d", ESP.getFreeHeap(), ESP.getMinFreeHeap());
+        serial_cmd_log("SYS", "free=%d min=%d max_block=%d",
+            ESP.getFreeHeap(), ESP.getMinFreeHeap(), ESP.getMaxAllocHeap());
     } else if (strcmp(args, "version") == 0) {
         serial_cmd_log("SYS", "firmware=%s codename=%s", BADGE_VERSION, BADGE_CODE_NAME);
     } else if (strcmp(args, "uptime") == 0) {
         serial_cmd_log("SYS", "ms=%lu", millis());
+    } else if (strcmp(args, "temp") == 0) {
+        serial_cmd_log("SYS", "temp_c=%.1f", temperatureRead());
     } else if (strcmp(args, "reboot") == 0) {
         serial_cmd_log("SYS", "rebooting");
         Serial.flush();
         ESP.restart();
+    } else if (strcmp(args, "diag") == 0) {
+        serial_cmd_log("DIAG", "heap_free=%d heap_min=%d heap_max_block=%d temp=%.1f uptime=%lu loop_rate=%d",
+            ESP.getFreeHeap(), ESP.getMinFreeHeap(), ESP.getMaxAllocHeap(),
+            temperatureRead(), millis(), s_loop_rate);
     } else {
         serial_cmd_log("SYS", "error=unknown args=%s", args);
     }
@@ -61,8 +69,6 @@ static void test_handler(const char *args) {
         if (cycles <= 0) cycles = 10;
         serial_cmd_log("TEST", "stress starting cycles=%d", cycles);
         uint32_t start_heap = ESP.getFreeHeap();
-        extern void create_main_menu(bool);
-        extern void create_system_submenu();
         for (int i = 0; i < cycles; i++) {
             create_system_submenu();
             lv_timer_handler();
@@ -129,33 +135,22 @@ static void process_command(char *cmd) {
     serial_cmd_log("ERROR", "unknown_command cmd=%s", cmd);
 }
 
-// External module registration functions
-extern void serial_register_nav();
-extern void serial_register_bling();
-extern void serial_register_ble();
-extern void serial_register_callsign();
-extern void serial_register_audio();
-extern void serial_register_screensaver();
-extern void serial_register_achievements();
-
 void serial_cmd_init() {
     cmd_pos = 0;
-    serial_cmd_register("sys", sys_handler, "heap, version, uptime, reboot");
+    serial_cmd_register("sys", sys_handler, "heap, version, uptime, temp, diag, reboot");
     serial_cmd_register("test", test_handler, "stress <n>, idle <ms>");
     serial_cmd_register("help", help_handler, "[module] - list commands");
-
-    serial_register_nav();
-    serial_register_bling();
-    serial_register_ble();
-    serial_register_callsign();
-    serial_register_audio();
-    serial_register_screensaver();
-    serial_register_achievements();
-
     serial_cmd_log("INIT", "bstp_v1 ready firmware=%s handlers=%d", BADGE_VERSION, s_handler_count);
 }
 
 void serial_cmd_poll() {
+    s_loop_count++;
+    uint32_t now = millis();
+    if (now - s_loop_last >= 1000) {
+        s_loop_rate = s_loop_count;
+        s_loop_count = 0;
+        s_loop_last = now;
+    }
     while (Serial.available()) {
         char c = Serial.read();
         if (c == '\n' || c == '\r') {

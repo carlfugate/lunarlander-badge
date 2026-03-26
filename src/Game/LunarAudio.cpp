@@ -187,17 +187,3 @@ void leds_achievement() {}
 
 #endif
 
-#ifdef FF_SERIAL_TEST
-#include "QA/SerialCmd.h"
-static void audio_serial_handler(const char *args) {
-    if (strcmp(args, "mute") == 0) { audio_set_mute(true); serial_cmd_log("AUDIO", "muted=1"); }
-    else if (strcmp(args, "unmute") == 0) { audio_set_mute(false); serial_cmd_log("AUDIO", "muted=0"); }
-    else if (strcmp(args, "status") == 0) { serial_cmd_log("AUDIO", "muted=%d", audio_is_muted() ? 1 : 0); }
-    else { serial_cmd_log("AUDIO", "error=unknown args=%s", args); }
-}
-void serial_register_audio() {
-    serial_cmd_register("audio", audio_serial_handler, "mute, unmute, status");
-}
-#else
-void serial_register_audio() {}
-#endif
