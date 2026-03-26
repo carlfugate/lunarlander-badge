@@ -330,3 +330,496 @@ Each step is a single commit. Flash to hardware and verify after each one.
 - `src/main.cpp` — no changes needed (already wired up)
 - `include/FeatureFlags.h` — no changes needed
 - `platformio.ini` — no changes needed
+
+---
+
+## 9. Native Testing Strategy
+
+### 9.1 Problem
+
+Flashing the ESP32-S3 takes 30-60s at 115200 baud (~1.9MB firmware), requires
+bootloader mode (physical button press), and sometimes fails (chip stops responding).
+We flashed ~15 times debugging the serial harness last round. Every bug caught before
+flashing saves 1-2 minutes and eliminates a failure risk.
+
+### 9.2 What's already testable natively
+
+The `[env:native]` PlatformIO environment compiles with `-DNATIVE_TEST` and builds
+only `src/Game/*` (via `build_src_filter = +<Game/*>`). Seven test suites exist:
+
+| Test | What it covers |
+|------|---------------|
+| `test_collision` | Terrain collision detection |
+| `test_game_state` | GameState init, phase transitions |
+| `test_scoring` | Score calculation |
+| `test_physics` | Lander physics (gravity, thrust, rotation) |
+| `test_terrain` | Terrain generation |
+| `test_scoreboard` | Scoreboard logic |
+| `test_audio_stubs` | Audio mute/unmute (NATIVE_TEST stubs) |
+
+These all pass without any hardware. The native env does NOT currently build any
+`src/QA/*` files.
+
+### 9.3 What can be tested natively for SerialCmd
+
+The command parser and dispatcher in `SerialCmd.cpp` are logically hardware-independent:
+- `serial_cmd_register()` — adds prefix + handler to a table
+- `process_command()` — matches prefix, splits args, dispatches
+- Command routing — correct handler called with correct args
+
+What CANNOT be tested natively (hardware-dependent):
+- `serial_cmd_poll()` — reads from `Serial` (Arduino)
+- `serial_cmd_log()` — writes to `Serial`
+- `sys_handler()` — calls `ESP.getFreeHeap()`, `ESP.restart()`, `millis()`
+- `test_handler()` — calls `lv_timer_handler()`, `ESP.getFreeHeap()`, `delay()`
+- All module handlers — call LVGL, ESP, NeoPixel APIs
+
+### 9.4 Native test design for SerialCmd
+
+Split `SerialCmd.cpp` into testable and non-testable parts:
+
+```cpp
+// --- Hardware-independent (testable natively) ---
+// Command table, registration, prefix matching, arg splitting
+void serial_cmd_register(const char *prefix, serial_cmd_handler_t handler, const char *help_text);
+static void process_command(char *cmd);  // needs to be non-static or wrapped
+
+// --- Hardware-dependent (ESP32 only) ---
+// serial_cmd_poll(), serial_cmd_log(), all handlers
+```
+
+A native test would:
+1. Call `serial_cmd_register()` with mock handlers
+2. Feed command strings into `process_command()`
+3. Assert the correct mock handler was called with correct args
+4. Assert unknown commands produce error dispatch
+
+To make this work:
+- `process_command()` must be exposed (non-static or via a testable wrapper)
+- `serial_cmd_log()` needs a `NATIVE_TEST` stub (printf to stdout)
+- The native env needs to build SerialCmd.cpp: add `+<QA/SerialCmd.cpp>` to
+  `build_src_filter` and define `FF_SERIAL_TEST` in native build flags
+- Handler implementations stay guarded by `#ifndef NATIVE_TEST`
+
+Estimated effort: small. The parser is ~20 lines. The test would be ~50 lines.
+Catches: registration bugs, prefix matching bugs, arg splitting bugs, off-by-one
+in command buffer.
+
+### 9.5 What native tests would NOT catch
+
+- Handlers calling wrong public API (compiles fine, wrong behavior)
+- LVGL screen creation side effects
+- Memory leaks from LVGL widgets
+- Serial I/O timing issues
+- BLE/WiFi interaction bugs
+
+These require hardware testing — but they're in the handler implementations, not the
+framework. If the framework is solid (tested natively), handler bugs are isolated and
+easier to diagnose on hardware.
+
+---
+
+## 10. Flash Minimization Plan
+
+### 10.1 Current problem
+
+The implementation spec (Section 4) has 6 steps, each requiring a flash. At 30-60s
+per flash plus potential failures, that's 3-6 minutes of flashing alone, plus risk of
+bricking a flash cycle.
+
+### 10.2 Revised flash strategy: 2 flashes instead of 6
+
+**Flash 1: Framework + sys commands (Steps 1-2 combined)**
+- Remove distributed handlers from module files
+- Remove `extern serial_register_*()` calls from SerialCmd.cpp
+- Add new public APIs to module headers (bling_set_mode, etc.)
+- Verify on hardware:
+  - `help` → shows sys, test, help only
+  - `sys.heap` → responds correctly
+  - Game launches, plays, difficulty buttons work
+  - All menu screens still work
+
+**Flash 2: All module handlers (Steps 3-5 combined)**
+- Add nav, bling, audio, callsign, screensaver, achievements, ble, game handlers
+- All in one commit — they're all in SerialCmd.cpp calling only public APIs
+- Verify on hardware:
+  - All serial commands respond
+  - Game still works after serial commands
+  - No memory leaks (sys.heap before/after)
+
+### 10.3 Why combining Steps 3-5 is safe
+
+- All handler code lives in one file (`SerialCmd.cpp`)
+- All handlers call only public APIs (verified by Section 3 audit)
+- No handler modifies module internals or static state
+- If one handler has a bug, it doesn't affect others (isolated dispatch)
+- The framework (registration, parsing, dispatch) is already proven from Flash 1
+- Native tests (Section 9) validate the framework before Flash 2
+
+### 10.4 Pre-flash gate: native validation
+
+Before each flash, run the full native validation (see Section 13 for checklist).
+This catches compile errors, linker errors (calling static functions), and parser
+bugs without touching hardware.
+
+### 10.5 When to add a flash
+
+Add a third flash ONLY if:
+- Flash 2 reveals a bug that requires framework changes (not just handler fixes)
+- A handler causes a crash or hang (not just wrong output)
+- Game behavior is affected (difficulty buttons, scoring, etc.)
+
+Handler output bugs (wrong format, missing field) can be fixed and re-flashed as
+part of the same Flash 2 cycle — don't count fix-and-reflash as a separate planned
+flash.
+
+---
+
+## 11. Post-Flash Verification Script
+
+### 11.1 Purpose
+
+After each flash, run an automated 30-second check that confirms the badge is
+functional. This replaces ad-hoc manual testing and ensures nothing regressed.
+
+### 11.2 Script: `scripts/verify_flash.sh`
+
+```bash
+#!/bin/bash
+# Post-flash verification — run immediately after successful flash
+# Usage: ./scripts/verify_flash.sh [port]
+# Default port: /dev/cu.usbmodem* (macOS) or /dev/ttyACM0 (Linux)
+
+PORT="${1:-$(ls /dev/cu.usbmodem* 2>/dev/null | head -1)}"
+if [ -z "$PORT" ]; then
+    PORT="${1:-/dev/ttyACM0}"
+fi
+BAUD=115200
+TIMEOUT=5
+PASS=0
+FAIL=0
+
+send_cmd() {
+    local cmd="$1"
+    local expect="$2"
+    echo "$cmd" > "$PORT"
+    sleep 0.5
+    # Read response with timeout
+    local resp
+    resp=$(timeout "$TIMEOUT" head -1 < "$PORT" 2>/dev/null)
+    if echo "$resp" | grep -q "$expect"; then
+        echo "  PASS: $cmd -> $resp"
+        ((PASS++))
+    else
+        echo "  FAIL: $cmd -> expected '$expect', got '$resp'"
+        ((FAIL++))
+    fi
+}
+
+echo "=== Post-Flash Verification ==="
+echo "Port: $PORT"
+echo ""
+
+# Configure serial port
+stty -f "$PORT" "$BAUD" cs8 -cstopb -parenb 2>/dev/null || \
+    stty -F "$PORT" "$BAUD" cs8 -cstopb -parenb 2>/dev/null
+
+# Wait for boot
+echo "Waiting for boot..."
+sleep 3
+
+# Core checks
+echo "--- Core ---"
+send_cmd "sys.heap" "free="
+send_cmd "sys.version" "firmware="
+send_cmd "sys.uptime" "ms="
+send_cmd "help" "modules="
+
+# Module checks (only after Flash 2)
+if [ "${2}" = "--full" ]; then
+    echo "--- Modules ---"
+    send_cmd "bling.status" "mode="
+    send_cmd "audio.status" "muted="
+    send_cmd "callsign.get" "callsign="
+    send_cmd "screensaver.status" "mode="
+    send_cmd "achievements.status" "total="
+    send_cmd "ble.status" "nearby="
+    send_cmd "game.state" "phase="
+fi
+
+echo ""
+echo "=== Results: $PASS passed, $FAIL failed ==="
+[ "$FAIL" -eq 0 ] && exit 0 || exit 1
+```
+
+### 11.3 Usage
+
+```bash
+# After Flash 1 (framework only):
+./scripts/verify_flash.sh
+
+# After Flash 2 (all handlers):
+./scripts/verify_flash.sh /dev/cu.usbmodem14101 --full
+```
+
+### 11.4 What it catches
+
+- Badge didn't boot (no serial output)
+- Serial command framework broken (no response to sys.heap)
+- Handler registration failed (help shows wrong module count)
+- Individual handler crash (timeout on specific command)
+- Firmware version mismatch (sys.version check)
+
+### 11.5 What it doesn't catch
+
+- Visual/UI bugs (screen rendering, animations)
+- Touch input issues
+- Game physics or scoring bugs
+- Memory leaks (would need repeated commands over time)
+- BLE/WiFi functionality
+
+For those, use `test.stress` and `test.idle` commands, plus manual visual inspection.
+
+---
+
+## 12. Simulator Testing
+
+### 12.1 Current simulator state
+
+The SDL2 simulator (`sim/sim_main.cpp`) runs the game engine natively with keyboard
+input. It compiles with `-DNATIVE_TEST -DSIMULATOR` and links only `src/Game/*` files.
+It has its own event loop using `SDL_PollEvent()` for keyboard input.
+
+### 12.2 Can we add serial command testing to the sim?
+
+Yes, with caveats. The sim's event loop is SDL-based. Adding stdin command processing
+would require non-blocking stdin reads inside the SDL loop:
+
+```cpp
+// In sim main loop, after SDL_PollEvent:
+#include <fcntl.h>
+// Set stdin non-blocking at startup:
+// fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
+// Then in loop:
+char line[128];
+if (fgets(line, sizeof(line), stdin)) {
+    process_command(line);  // reuse SerialCmd parser
+}
+```
+
+This would let you type commands like `game.state` in the terminal while the sim
+runs, and see output on stdout.
+
+### 12.3 What sim testing would cover
+
+- Game state queries (`game.state`) — verify state reporting without hardware
+- Game start/stop lifecycle — verify `lunar_lander_start()`/`lunar_lander_stop()` equivalents
+- Command parser correctness — same parser code, different I/O backend
+
+### 12.4 What sim testing would NOT cover
+
+- Navigation commands (no LVGL, no menu system)
+- Bling/LED commands (no NeoPixel)
+- BLE/WiFi commands
+- Audio commands (stubbed out)
+- Screensaver, achievements, callsign (QA modules not compiled)
+
+### 12.5 Recommendation
+
+Low priority for v1. The sim only covers game commands, which are the simplest
+handlers (3 commands). Native unit tests (Section 9) give better coverage of the
+parser framework. The sim is most useful for game physics debugging, not serial
+harness testing.
+
+If added later, keep it minimal: non-blocking stdin in the SDL loop, reuse
+`process_command()`, print to stdout instead of Serial.
+
+---
+
+## 13. Pre-Flash Checklist
+
+Run this checklist before every flash. Automate as `scripts/pre_flash_check.sh`.
+
+### 13.1 Automated checks
+
+```bash
+#!/bin/bash
+# Pre-flash validation — run before every flash
+# Usage: ./scripts/pre_flash_check.sh
+
+set -e
+FAIL=0
+
+echo "=== Pre-Flash Checklist ==="
+
+# 1. ESP32 build succeeds
+echo -n "1. ESP32 build... "
+if pio run -e esp32-s3 --silent 2>&1 | tail -1 | grep -q "SUCCESS"; then
+    echo "PASS"
+else
+    echo "FAIL"
+    ((FAIL++))
+fi
+
+# 2. Native build succeeds
+echo -n "2. Native build... "
+if pio run -e native --silent 2>&1 | tail -1 | grep -q "SUCCESS"; then
+    echo "PASS"
+else
+    echo "FAIL"
+    ((FAIL++))
+fi
+
+# 3. Native tests pass
+echo -n "3. Native tests... "
+if pio test -e native --silent 2>&1 | tail -1 | grep -q "passed"; then
+    echo "PASS"
+else
+    echo "FAIL"
+    ((FAIL++))
+fi
+
+# 4. No new warnings (check for warning count)
+echo -n "4. Build warnings... "
+WARNS=$(pio run -e esp32-s3 2>&1 | grep -c "warning:" || true)
+if [ "$WARNS" -eq 0 ]; then
+    echo "PASS (0 warnings)"
+else
+    echo "WARN ($WARNS warnings — review before flashing)"
+fi
+
+# 5. FF_SERIAL_TEST only in allowed files
+echo -n "5. FF_SERIAL_TEST scope... "
+BAD_FILES=$(grep -rn 'FF_SERIAL_TEST' src/ include/ --include='*.cpp' --include='*.h' --include='*.hpp' \
+    | grep -v 'SerialCmd\.\|FeatureFlags\.h' | wc -l | tr -d ' ')
+if [ "$BAD_FILES" -eq 0 ]; then
+    echo "PASS"
+else
+    echo "FAIL — FF_SERIAL_TEST found in unexpected files:"
+    grep -rn 'FF_SERIAL_TEST' src/ include/ --include='*.cpp' --include='*.h' --include='*.hpp' \
+        | grep -v 'SerialCmd\.\|FeatureFlags\.h'
+    ((FAIL++))
+fi
+
+# 6. SerialCmd.cpp only calls public APIs (no extern of statics)
+echo -n "6. No extern statics... "
+EXTERNS=$(grep -c 'extern.*static\|extern void serial_register' src/QA/SerialCmd.cpp 2>/dev/null || true)
+if [ "$EXTERNS" -eq 0 ]; then
+    echo "PASS"
+else
+    echo "FAIL — extern declarations found in SerialCmd.cpp"
+    grep 'extern.*static\|extern void serial_register' src/QA/SerialCmd.cpp
+    ((FAIL++))
+fi
+
+# 7. Game source files unchanged (optional — skip if intentionally modified)
+echo -n "7. Game files unchanged... "
+GAME_CHANGES=$(git diff --name-only HEAD -- src/Game/ include/Game/ 2>/dev/null | wc -l | tr -d ' ')
+if [ "$GAME_CHANGES" -eq 0 ]; then
+    echo "PASS"
+else
+    echo "INFO — $GAME_CHANGES game file(s) modified (verify intentional):"
+    git diff --name-only HEAD -- src/Game/ include/Game/ 2>/dev/null
+fi
+
+echo ""
+if [ "$FAIL" -eq 0 ]; then
+    echo "=== ALL CHECKS PASSED — safe to flash ==="
+    exit 0
+else
+    echo "=== $FAIL CHECK(S) FAILED — fix before flashing ==="
+    exit 1
+fi
+```
+
+### 13.2 Manual checks (cannot automate)
+
+- [ ] Badge is in bootloader mode (hold BOOT, press RESET)
+- [ ] USB cable is data-capable (not charge-only)
+- [ ] Serial monitor is closed (won't conflict with upload)
+- [ ] Battery is charged (low battery can cause flash failures)
+
+### 13.3 When to skip checks
+
+Never skip checks 1-3 (build + tests). Checks 5-6 can be skipped if you haven't
+touched SerialCmd.cpp or FeatureFlags.h. Check 7 is informational only.
+
+---
+
+## 14. CI Integration
+
+### 14.1 Current CI state
+
+The GitHub Actions workflow (`.github/workflows/platformio-build.yml`) runs only
+`platformio run` (ESP32 build). It does NOT:
+- Build the native environment
+- Run native tests
+- Build with `FF_SERIAL_TEST` enabled
+- Check feature flag scope
+
+### 14.2 Recommended CI additions
+
+Update `.github/workflows/platformio-build.yml` to add:
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      # Existing: ESP32 build
+      - name: Build ESP32 firmware
+        run: platformio run -e esp32-s3
+
+      # NEW: Native build + tests
+      - name: Build native
+        run: platformio run -e native
+      - name: Run native tests
+        run: platformio test -e native
+
+      # NEW: Feature flag scope check
+      - name: Check FF_SERIAL_TEST scope
+        run: |
+          BAD=$(grep -rn 'FF_SERIAL_TEST' src/ include/ --include='*.cpp' --include='*.h' --include='*.hpp' \
+            | grep -v 'SerialCmd\.\|FeatureFlags\.h' | wc -l)
+          if [ "$BAD" -ne 0 ]; then
+            echo "ERROR: FF_SERIAL_TEST found outside allowed files:"
+            grep -rn 'FF_SERIAL_TEST' src/ include/ --include='*.cpp' --include='*.h' --include='*.hpp' \
+              | grep -v 'SerialCmd\.\|FeatureFlags\.h'
+            exit 1
+          fi
+```
+
+### 14.3 What CI catches
+
+| Check | Bug type caught |
+|-------|----------------|
+| ESP32 build | Syntax errors, missing includes, type mismatches |
+| Native build | Same, plus linker errors from calling static functions |
+| Native tests | Parser regressions, physics regressions, scoring regressions |
+| FF_SERIAL_TEST scope | Distributed `#ifdef` blocks creeping back in |
+
+### 14.4 What CI doesn't catch
+
+- Runtime behavior on ESP32 (heap, timing, LVGL rendering)
+- Hardware-specific bugs (SPI, I2C, BLE, WiFi)
+- Visual regressions
+- Serial command output format
+
+These require hardware testing, which is why the post-flash verification script
+(Section 11) exists.
+
+### 14.5 Implementation priority
+
+Adding native build + test to CI is the single highest-value change. It's 3 lines
+of YAML and catches the entire class of "compiles on ESP32 but calls static
+functions" bugs that caused the difficulty button issue. The feature flag scope
+check is another 5 lines and prevents regression to the distributed handler pattern.
