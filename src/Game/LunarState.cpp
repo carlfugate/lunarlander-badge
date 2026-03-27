@@ -634,6 +634,7 @@ void game_cleanup() {
     leds_idle();
     renderer_cleanup();
     game_screen = NULL;
+    gs.phase = PHASE_MENU;  // reset so game.stop guard works
 }
 
 void lunar_lander_stop() {
@@ -657,6 +658,7 @@ void lunar_lander_stop() {
     renderer_cleanup();
     game_screen = NULL;
     was_thrusting = false;
+    gs.phase = PHASE_MENU;
     create_main_menu(false);
 }
 #endif
