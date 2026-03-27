@@ -626,6 +626,16 @@ void game_start_at_difficulty(uint8_t difficulty) {
     game_timer = lv_timer_create(game_tick_cb, 16, NULL);
 }
 
+void game_cleanup() {
+    if (game_timer) { lv_timer_del(game_timer); game_timer = NULL; }
+    if (spectate_timer) { lv_timer_del(spectate_timer); spectate_timer = NULL; }
+    if (mp_timer) { lv_timer_del(mp_timer); mp_timer = NULL; }
+    audio_thrust_stop();
+    leds_idle();
+    renderer_cleanup();
+    game_screen = NULL;
+}
+
 void lunar_lander_stop() {
     if (game_timer) {
         lv_timer_del(game_timer);

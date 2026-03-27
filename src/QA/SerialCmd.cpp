@@ -145,6 +145,8 @@ static void process_command(char *cmd) {
 // --- nav ---
 static void nav_handler(const char *args) {
     screensaver_stop();   // stop timer before screen delete to avoid dangling ss_canvas
+    extern void game_cleanup();
+    game_cleanup();       // stop any active game without navigating to main menu
     struct { const char *name; void (*fn)(); } screens[] = {
         {"main", []() { create_main_menu(false); }},
         {"system", []() { create_system_submenu(); }},

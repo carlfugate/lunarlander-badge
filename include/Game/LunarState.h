@@ -44,6 +44,7 @@ void lunar_lander_start();
 void lunar_lander_stop();
 const GameState* game_get_state();
 void game_start_at_difficulty(uint8_t difficulty);
+void game_cleanup();
 #endif
 
 #endif
