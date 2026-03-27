@@ -249,13 +249,9 @@ static void game_handler(const char *args) {
         serial_cmd_log("GAME", "started diff=%d phase=%d heap=%d", diff, game_get_state()->phase, ESP.getFreeHeap());
     }
     else if (strcmp(args, "stop") == 0) {
-        const GameState *g = game_get_state();
-        if (g && g->phase != PHASE_MENU) {
-            lunar_lander_stop();
-            serial_cmd_log("GAME", "stopped");
-        } else {
-            serial_cmd_log("GAME", "not_running");
-        }
+        game_cleanup();
+        create_main_menu(false);
+        serial_cmd_log("GAME", "stopped heap=%d", ESP.getFreeHeap());
     }
     else serial_cmd_log("GAME", "error=unknown args=%s", args);
 }
