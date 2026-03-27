@@ -74,6 +74,9 @@ static void test_handler(const char *args) {
     if (strncmp(args, "stress ", 7) == 0) {
         int cycles = atoi(args + 7);
         if (cycles <= 0) cycles = 10;
+        screensaver_stop();
+        extern void game_cleanup();
+        game_cleanup();
         serial_cmd_log("TEST", "stress starting cycles=%d", cycles);
         uint32_t start_heap = ESP.getFreeHeap();
         for (int i = 0; i < cycles; i++) {
@@ -240,6 +243,8 @@ static void game_handler(const char *args) {
         if (args[5] == ' ') diff = atoi(args + 6);
         if (diff < 0 || diff > 2) diff = 0;
         screensaver_stop();
+        extern void game_cleanup();
+        game_cleanup();
         game_start_at_difficulty((uint8_t)diff);
         serial_cmd_log("GAME", "started diff=%d phase=%d heap=%d", diff, game_get_state()->phase, ESP.getFreeHeap());
     }
