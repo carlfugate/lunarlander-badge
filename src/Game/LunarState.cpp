@@ -306,6 +306,7 @@ static void game_tick_cb(lv_timer_t *t) {
     if (gs.phase == PHASE_LANDED) {
         lv_timer_del(game_timer);
         game_timer = NULL;
+        Serial.printf("[GAME] landed score=%d fuel=%d elapsed=%lu\n", gs.score, (int)gs.lander.fuel, gs.elapsed_ms);
         audio_thrust_stop();
         audio_landed();
         leds_landed();
@@ -316,6 +317,7 @@ static void game_tick_cb(lv_timer_t *t) {
     } else if (gs.phase == PHASE_CRASHED) {
         lv_timer_del(game_timer);
         game_timer = NULL;
+        Serial.printf("[GAME] crashed elapsed=%lu\n", gs.elapsed_ms);
         audio_thrust_stop();
         audio_crashed();
         leds_crashed();
@@ -598,6 +600,30 @@ void lunar_lander_start() {
     leds_idle();
     scoreboard_load(scoreboard);
     show_mode_select();
+}
+
+void game_start_at_difficulty(uint8_t difficulty) {
+    if (!game_screen) {
+        stop_menu_timers();
+        bling_stop_animation();
+        game_screen = lv_obj_create(NULL);
+        lv_obj_set_style_bg_color(game_screen, lv_color_black(), 0);
+        load_screen_and_delete_old(game_screen);
+        leds_idle();
+        scoreboard_load(scoreboard);
+    }
+    lv_obj_clean(game_screen);
+    gs.mode = MODE_OFFLINE;
+    game_init(gs, difficulty, (uint32_t)millis());
+    gs.phase = PHASE_PLAYING;
+    gs.start_ms = millis();
+    gs.last_tick_ms = gs.start_ms;
+    input_init();
+    renderer_init(game_screen);
+    was_thrusting = false;
+    solo_last_rotate = 0;
+    if (game_timer) { lv_timer_del(game_timer); game_timer = NULL; }
+    game_timer = lv_timer_create(game_tick_cb, 16, NULL);
 }
 
 void lunar_lander_stop() {

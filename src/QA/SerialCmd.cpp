@@ -10,6 +10,7 @@
 #include "QA/Bling.hpp"
 #include "QA/Screensaver.h"
 #include "Game/LunarAudio.h"
+#include "Game/LunarState.h"
 #include "QA/Callsign.h"
 #include "QA/Achievements.h"
 #include "QA/BlePresence.h"
@@ -232,7 +233,14 @@ static void game_handler(const char *args) {
             serial_cmd_log("GAME", "not_active");
         }
     }
-    else if (strcmp(args, "start") == 0) { lunar_lander_start(); serial_cmd_log("GAME", "launched"); }
+    else if (strncmp(args, "start", 5) == 0) {
+        int diff = 0;
+        if (args[5] == ' ') diff = atoi(args + 6);
+        if (diff < 0 || diff > 2) diff = 0;
+        screensaver_stop();
+        game_start_at_difficulty((uint8_t)diff);
+        serial_cmd_log("GAME", "started diff=%d phase=%d heap=%d", diff, game_get_state()->phase, ESP.getFreeHeap());
+    }
     else if (strcmp(args, "stop") == 0) { lunar_lander_stop(); serial_cmd_log("GAME", "stopped"); }
     else serial_cmd_log("GAME", "error=unknown args=%s", args);
 }
@@ -249,7 +257,7 @@ void serial_cmd_init() {
     serial_cmd_register("screensaver", screensaver_handler, "mode <n>, status, list");
     serial_cmd_register("achievements", ach_handler, "status, list, unlock <id>");
     serial_cmd_register("ble", ble_handler, "status");
-    serial_cmd_register("game", game_handler, "state, start, stop");
+    serial_cmd_register("game", game_handler, "state, start [0-2], stop");
     serial_cmd_log("INIT", "bstp_v1 ready firmware=%s handlers=%d", BADGE_VERSION, s_handler_count);
 }
 
