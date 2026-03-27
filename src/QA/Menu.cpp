@@ -105,6 +105,9 @@ static lv_color_t btn_grad_end[10] = {
 };
 
 void init_modern_button_styles() {
+    static bool initialized = false;
+    if (initialized) return;
+    initialized = true;
     for (int i = 0; i < 10; ++i) {
         lv_style_init(&style_modern_btns[i]);
         lv_style_set_bg_color(&style_modern_btns[i], btn_grad_start[i]);
