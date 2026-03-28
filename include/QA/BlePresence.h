@@ -31,6 +31,12 @@ void ble_presence_send_message(uint8_t msg_id);
 const char* ble_presence_get_message_text(uint8_t msg_id);
 void create_comms_window();
 
+void ble_presence_update_callsign(const char *name);
+
+int ble_presence_msg_history_count();
+const char* ble_presence_msg_history_sender(int idx);
+uint8_t ble_presence_msg_history_msg_id(int idx);
+
 void ble_presence_stop();
 void ble_presence_restart();
 

@@ -54,6 +54,11 @@ static uint8_t s_msg_id = 0;
 static uint32_t s_msg_send_ms = 0;
 static uint32_t s_last_send_ms = 0;
 
+#define MSG_HISTORY_SIZE 20
+static struct { char sender[BLE_CALLSIGN_LEN+1]; uint8_t msg_id; uint32_t met; } s_msg_history[MSG_HISTORY_SIZE];
+static int s_msg_history_count = 0;
+static int s_msg_history_head = 0;
+
 static CrewEntry s_crew[BLE_MAX_CREW];
 static int s_crew_count = 0;
 static int s_nearby = 0;
@@ -187,6 +192,13 @@ static void process_result(BLEAdvertisedDevice *dev) {
                 snprintf(s_last_notification, sizeof(s_last_notification),
                     "%s: %s", callsign, preset_messages[msg_id]);
                 s_has_notification = true;
+                // Record in message history
+                strncpy(s_msg_history[s_msg_history_head].sender, callsign, BLE_CALLSIGN_LEN);
+                s_msg_history[s_msg_history_head].sender[BLE_CALLSIGN_LEN] = '\0';
+                s_msg_history[s_msg_history_head].msg_id = msg_id;
+                s_msg_history[s_msg_history_head].met = met;
+                s_msg_history_head = (s_msg_history_head + 1) % MSG_HISTORY_SIZE;
+                if (s_msg_history_count < MSG_HISTORY_SIZE) s_msg_history_count++;
                 // Defer LED pulse to main task via scan_tick
                 s_msg_received_pulse = true;
             }
@@ -268,6 +280,26 @@ void ble_presence_update_score(uint16_t score) {
 void ble_presence_set_status(uint8_t status) {
     s_status = status;
     start_advertising();
+}
+
+void ble_presence_update_callsign(const char *name) {
+    strncpy(s_callsign, name, BLE_CALLSIGN_LEN);
+    s_callsign[BLE_CALLSIGN_LEN] = '\0';
+    start_advertising();
+}
+
+int ble_presence_msg_history_count() { return s_msg_history_count; }
+
+const char* ble_presence_msg_history_sender(int idx) {
+    if (idx < 0 || idx >= s_msg_history_count) return "";
+    int pos = (s_msg_history_head - 1 - idx + MSG_HISTORY_SIZE) % MSG_HISTORY_SIZE;
+    return s_msg_history[pos].sender;
+}
+
+uint8_t ble_presence_msg_history_msg_id(int idx) {
+    if (idx < 0 || idx >= s_msg_history_count) return 0;
+    int pos = (s_msg_history_head - 1 - idx + MSG_HISTORY_SIZE) % MSG_HISTORY_SIZE;
+    return s_msg_history[pos].msg_id;
 }
 
 int ble_presence_nearby_count() { return s_nearby; }
@@ -366,7 +398,37 @@ void create_comms_window() {
         lv_obj_center(lbl);
     }
 
-    // Back button
+    // Message history
+    int hist_count = ble_presence_msg_history_count();
+    if (hist_count > 10) hist_count = 10;
+    if (hist_count > 0) {
+        lv_obj_t *hist_hdr = lv_label_create(scr);
+        lv_label_set_text(hist_hdr, "RECENT");
+        lv_obj_set_style_text_color(hist_hdr, lv_color_hex(0x00e5ff), 0);
+        lv_obj_set_style_text_font(hist_hdr, &lv_font_unscii_8, 0);
+        lv_obj_set_pos(hist_hdr, 8, 210);
+
+        lv_obj_t *hist_list = lv_obj_create(scr);
+        lv_obj_set_size(hist_list, 312, 70);
+        lv_obj_set_pos(hist_list, 4, 222);
+        lv_obj_set_style_bg_color(hist_list, lv_color_hex(0x0a0a0f), 0);
+        lv_obj_set_style_border_width(hist_list, 0, 0);
+        lv_obj_set_style_pad_all(hist_list, 0, 0);
+        lv_obj_set_scroll_dir(hist_list, LV_DIR_VER);
+
+        for (int i = 0; i < hist_count; i++) {
+            lv_obj_t *row = lv_label_create(hist_list);
+            uint8_t mid = ble_presence_msg_history_msg_id(i);
+            lv_label_set_text_fmt(row, "%s: %s",
+                ble_presence_msg_history_sender(i),
+                (mid <= BLE_NUM_MESSAGES) ? preset_messages[mid] : "");
+            lv_obj_set_style_text_color(row, lv_color_hex(0x888888), 0);
+            lv_obj_set_style_text_font(row, &lv_font_unscii_8, 0);
+            lv_obj_set_pos(row, 4, i * 14);
+        }
+    }
+
+    // Back button (comms)
     lv_obj_t *back = lv_btn_create(scr);
     lv_obj_set_size(back, 80, 28);
     lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -4);
@@ -459,6 +521,11 @@ const char* ble_presence_get_message_text(uint8_t) { return ""; }
 void create_comms_window() {}
 void ble_presence_stop() {}
 void ble_presence_restart() {}
+
+void ble_presence_update_callsign(const char*) {}
+int ble_presence_msg_history_count() { return 0; }
+const char* ble_presence_msg_history_sender(int) { return ""; }
+uint8_t ble_presence_msg_history_msg_id(int) { return 0; }
 
 bool ble_presence_has_notification() { return false; }
 const char* ble_presence_get_notification() { return ""; }

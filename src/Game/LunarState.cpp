@@ -86,6 +86,7 @@ uint16_t game_calc_score(const GameState &gs) {
 #include "QA/Menu.h"
 #include "QA/Bling.hpp"
 #include "QA/Achievements.h"
+#include "QA/BlePresence.h"
 
 static GameState gs;
 static Scoreboard scoreboard;
@@ -528,6 +529,7 @@ static void show_game_over() {
     if (gs.phase == PHASE_LANDED && gs.score > 0) {
         rank = scoreboard_add(scoreboard, gs.score, gs.difficulty);
         scoreboard_save(scoreboard);
+        ble_presence_update_score(gs.score);
     }
 
     // Achievement checks
@@ -624,6 +626,7 @@ void game_start_at_difficulty(uint8_t difficulty) {
     solo_last_rotate = 0;
     if (game_timer) { lv_timer_del(game_timer); game_timer = NULL; }
     game_timer = lv_timer_create(game_tick_cb, 16, NULL);
+    ble_presence_set_status(1);  // 1 = playing
 }
 
 void game_cleanup() {
@@ -659,6 +662,7 @@ void lunar_lander_stop() {
     game_screen = NULL;
     was_thrusting = false;
     gs.phase = PHASE_MENU;
+    ble_presence_set_status(0);  // 0 = idle
     create_main_menu(false);
 }
 #endif

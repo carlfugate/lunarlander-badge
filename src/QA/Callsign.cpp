@@ -1,4 +1,5 @@
 #include "QA/Callsign.h"
+#include "QA/BlePresence.h"
 #include "QA/Menu.h"
 #include <lvgl.h>
 #include <SD.h>
@@ -29,6 +30,7 @@ void callsign_set(const char* name) {
     s_callsign[MAX_CALLSIGN_LEN] = '\0';
     File f = SD.open("/callsign.txt", FILE_WRITE);
     if (f) { f.println(s_callsign); f.close(); }
+    ble_presence_update_callsign(s_callsign);
 }
 
 static void preset_cb(lv_event_t *e) {
