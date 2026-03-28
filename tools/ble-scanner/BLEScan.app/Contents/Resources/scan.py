@@ -35,13 +35,11 @@ def parse_badge_data(device, ad):
     """Parse BSidesKC badge advertisement data."""
     for uuid in (ad.service_uuids or []):
         if BSIDES_UUID_FRAGMENT in uuid.lower():
-            # Reconstruct full 16-byte payload: bleak splits manufacturer data
-            # into company_id (first 2 bytes) as dict key and remaining as value.
-            # ESP32 setManufacturerData sends all 16 bytes as raw manufacturer data,
-            # so BLE spec treats bytes[0:2] as company_id.
+            # With 0xFFFF company ID, bleak gives us company_id as dict key
+            # and the 16-byte payload as value — use value directly.
             raw = b''
             for company_id, value in ad.manufacturer_data.items():
-                raw = struct.pack('<H', company_id) + bytes(value)
+                raw = bytes(value)
                 break
 
             callsign = ''

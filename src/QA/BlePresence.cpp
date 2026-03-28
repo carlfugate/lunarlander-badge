@@ -71,22 +71,24 @@ static void start_advertising() {
     BLEAdvertising *pAdv = BLEDevice::getAdvertising();
     pAdv->stop();
 
-    // Manufacturer data: callsign(10) + score(2) + status(1) + msg_id(1) + tag(2)
-    uint8_t mfg_data[16];
-    memset(mfg_data, 0, sizeof(mfg_data));
-    memcpy(mfg_data, s_callsign, strlen(s_callsign));
-    mfg_data[10] = s_score & 0xFF;
-    mfg_data[11] = (s_score >> 8) & 0xFF;
-    mfg_data[12] = s_status;
-    mfg_data[13] = s_msg_id;
+    // Manufacturer data: company_id(2) + callsign(10) + score(2) + status(1) + msg_id(1) + tag(2)
+    uint8_t mfg_data[18];
+    mfg_data[0] = 0xFF;  // company ID low byte (0xFFFF = BLE SIG "testing")
+    mfg_data[1] = 0xFF;  // company ID high byte
+    memset(mfg_data + 2, 0, 16);
+    memcpy(mfg_data + 2, s_callsign, strlen(s_callsign));
+    mfg_data[12] = s_score & 0xFF;
+    mfg_data[13] = (s_score >> 8) & 0xFF;
+    mfg_data[14] = s_status;
+    mfg_data[15] = s_msg_id;
     uint16_t tag = compute_tag(s_callsign, s_score);
-    mfg_data[14] = tag & 0xFF;
-    mfg_data[15] = (tag >> 8) & 0xFF;
+    mfg_data[16] = tag & 0xFF;
+    mfg_data[17] = (tag >> 8) & 0xFF;
 
     BLEAdvertisementData advData;
     advData.setFlags(0x06);  // General Discoverable + BR/EDR Not Supported
     advData.setCompleteServices(BLEUUID((uint16_t)BSIDES_SERVICE_UUID));
-    advData.setManufacturerData(std::string((char *)mfg_data, 16));
+    advData.setManufacturerData(std::string((char *)mfg_data, 18));
 
     pAdv->setAdvertisementData(advData);
     pAdv->setMinInterval(0x50);
@@ -99,14 +101,19 @@ static void process_result(BLEAdvertisedDevice *dev) {
     if (!dev->isAdvertisingService(BLEUUID((uint16_t)BSIDES_SERVICE_UUID))) return;
 
     std::string mfg = dev->getManufacturerData();
+    // NimBLE getManufacturerData() includes 2-byte company ID prefix; skip it
+    if (mfg.length() < 2) return;
+    const char *data = mfg.data() + 2;
+    int data_len = mfg.length() - 2;
+
 #ifdef FF_BLE_NO_AUTH
-    if (mfg.length() < 13) return; // minimum: callsign(10) + score(2) + status(1)
+    if (data_len < 13) return; // minimum: callsign(10) + score(2) + status(1)
 #else
-    if (mfg.length() < 16) return; // reject short payloads (no auth tag)
+    if (data_len < 16) return; // reject short payloads (no auth tag)
 #endif
 
     char callsign[BLE_CALLSIGN_LEN + 1];
-    memcpy(callsign, mfg.data(), BLE_CALLSIGN_LEN);
+    memcpy(callsign, data, BLE_CALLSIGN_LEN);
     callsign[BLE_CALLSIGN_LEN] = '\0';
     for (int i = BLE_CALLSIGN_LEN - 1; i >= 0 && callsign[i] == '\0'; i--)
         callsign[i] = '\0';
@@ -119,14 +126,14 @@ static void process_result(BLEAdvertisedDevice *dev) {
 
     if (strcmp(callsign, s_callsign) == 0) return;
 
-    uint16_t score = (uint8_t)mfg[10] | ((uint8_t)mfg[11] << 8);
+    uint16_t score = (uint8_t)data[10] | ((uint8_t)data[11] << 8);
 
     // Validate score range
     if (score > 10000) return;
 
     // Verify authentication tag
 #ifndef FF_BLE_NO_AUTH
-    uint16_t received_tag = (uint8_t)mfg[14] | ((uint8_t)mfg[15] << 8);
+    uint16_t received_tag = (uint8_t)data[14] | ((uint8_t)data[15] << 8);
     uint16_t expected_tag = compute_tag(callsign, score);
     if (received_tag != expected_tag) return;
 #endif
@@ -171,7 +178,7 @@ static void process_result(BLEAdvertisedDevice *dev) {
 
     // Parse message_id (byte 14) with validation
     if (idx >= 0) {
-        uint8_t msg_id = (uint8_t)mfg[13];
+        uint8_t msg_id = (uint8_t)data[13];
         if (msg_id > BLE_NUM_MESSAGES) msg_id = 0; // clamp invalid
         if (msg_id != 0 && msg_id <= BLE_NUM_MESSAGES) {
             if (s_crew[idx].last_msg_id != msg_id || now - s_crew[idx].last_msg_ms > 10000) {
