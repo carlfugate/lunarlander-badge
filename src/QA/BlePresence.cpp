@@ -8,6 +8,7 @@
 
 #include <NimBLEDevice.h>
 #include <Adafruit_NeoPixel.h>
+#include <Preferences.h>
 #include <lvgl.h>
 
 // BSidesKC custom service UUID (16-bit)
@@ -62,6 +63,25 @@ static int s_msg_history_head = 0;
 static CrewEntry s_crew[BLE_MAX_CREW];
 static int s_crew_count = 0;
 static int s_nearby = 0;
+
+static void crew_save() {
+    Preferences prefs;
+    prefs.begin("crew", false);
+    prefs.putUChar("count", s_crew_count);
+    prefs.putBytes("data", s_crew, sizeof(CrewEntry) * s_crew_count);
+    prefs.end();
+}
+
+static void crew_load() {
+    Preferences prefs;
+    prefs.begin("crew", true);
+    s_crew_count = prefs.getUChar("count", 0);
+    if (s_crew_count > BLE_MAX_CREW) s_crew_count = 0;
+    if (s_crew_count > 0) {
+        prefs.getBytes("data", s_crew, sizeof(CrewEntry) * s_crew_count);
+    }
+    prefs.end();
+}
 
 static BLEScan *pScan = NULL;
 static lv_timer_t *scan_timer = NULL;
@@ -179,6 +199,8 @@ static void process_result(BLEAdvertisedDevice *dev) {
 
         // Defer LED pulse to main task via scan_tick
         s_new_discovery_pulse = true;
+
+        crew_save();
     }
 
     // Parse message_id (byte 14) with validation
@@ -256,8 +278,9 @@ void ble_presence_init(const char *my_callsign, uint16_t my_score) {
     strncpy(s_callsign, my_callsign, BLE_CALLSIGN_LEN);
     s_callsign[BLE_CALLSIGN_LEN] = '\0';
     s_score = my_score;
-    s_crew_count = 0;
     s_nearby = 0;
+
+    crew_load();
 
     BLEDevice::init("BSidesKC");
 

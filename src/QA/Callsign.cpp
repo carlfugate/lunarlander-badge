@@ -1,6 +1,7 @@
 #include "QA/Callsign.h"
 #include "QA/BlePresence.h"
 #include "QA/Menu.h"
+#include <Preferences.h>
 #include <lvgl.h>
 #include <SD.h>
 #include <string.h>
@@ -20,7 +21,15 @@ void callsign_init() {
         size_t n = f.readBytesUntil('\n', s_callsign, MAX_CALLSIGN_LEN);
         s_callsign[n] = '\0';
         f.close();
+        return;
     }
+    // NVS fallback
+    Preferences prefs;
+    prefs.begin("badge", true);
+    String name = prefs.getString("callsign", "PILOT");
+    strncpy(s_callsign, name.c_str(), MAX_CALLSIGN_LEN);
+    s_callsign[MAX_CALLSIGN_LEN] = '\0';
+    prefs.end();
 }
 
 const char* callsign_get() { return s_callsign; }
@@ -28,8 +37,14 @@ const char* callsign_get() { return s_callsign; }
 void callsign_set(const char* name) {
     strncpy(s_callsign, name, MAX_CALLSIGN_LEN);
     s_callsign[MAX_CALLSIGN_LEN] = '\0';
+    // Save to SD if available
     File f = SD.open("/callsign.txt", FILE_WRITE);
     if (f) { f.println(s_callsign); f.close(); }
+    // Always save to NVS
+    Preferences prefs;
+    prefs.begin("badge", false);
+    prefs.putString("callsign", s_callsign);
+    prefs.end();
     ble_presence_update_callsign(s_callsign);
 }
 

@@ -15,6 +15,7 @@ static const char* ach_names[] = {
 
 #include "QA/Menu.h"
 #include "Game/LunarAudio.h"
+#include <Preferences.h>
 #include <lvgl.h>
 #include <SD.h>
 
@@ -27,9 +28,16 @@ void achievements_init() {
         f.read(s_unlocked, ACH_COUNT);
         f.read((uint8_t *)&s_games_played, sizeof(s_games_played));
         f.close();
-        for (int i = 0; i < ACH_COUNT; i++)
-            if (s_unlocked[i]) s_total++;
+    } else {
+        // NVS fallback
+        Preferences prefs;
+        prefs.begin("badge", true);
+        prefs.getBytes("ach", s_unlocked, ACH_COUNT);
+        prefs.getBytes("ach_gp", &s_games_played, sizeof(s_games_played));
+        prefs.end();
     }
+    for (int i = 0; i < ACH_COUNT; i++)
+        if (s_unlocked[i]) s_total++;
 }
 
 void achievements_save() {
@@ -39,6 +47,12 @@ void achievements_save() {
         f.write((uint8_t *)&s_games_played, sizeof(s_games_played));
         f.close();
     }
+    // Always save to NVS
+    Preferences prefs;
+    prefs.begin("badge", false);
+    prefs.putBytes("ach", s_unlocked, ACH_COUNT);
+    prefs.putBytes("ach_gp", &s_games_played, sizeof(s_games_played));
+    prefs.end();
 }
 
 bool achievement_unlocked(uint8_t id) {

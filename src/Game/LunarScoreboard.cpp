@@ -29,6 +29,7 @@ int scoreboard_add(Scoreboard &sb, uint16_t score, uint8_t difficulty) {
 }
 
 #ifndef NATIVE_TEST
+#include <Preferences.h>
 #include <SD.h>
 
 static const char *SCORE_FILE = "/lander_scores.dat";
@@ -36,9 +37,16 @@ static const char *SCORE_FILE = "/lander_scores.dat";
 void scoreboard_load(Scoreboard &sb) {
     scoreboard_init(sb);
     File f = SD.open(SCORE_FILE, FILE_READ);
-    if (!f) return;
-    f.read((uint8_t *)&sb, sizeof(sb));
-    f.close();
+    if (f) {
+        f.read((uint8_t *)&sb, sizeof(sb));
+        f.close();
+    } else {
+        // NVS fallback
+        Preferences prefs;
+        prefs.begin("badge", true);
+        prefs.getBytes("scores", &sb, sizeof(sb));
+        prefs.end();
+    }
     // Validate
     if (sb.count > LN_MAX_SCORES) { scoreboard_init(sb); return; }
     for (int i = 0; i < sb.count; i++) {
@@ -50,9 +58,12 @@ void scoreboard_load(Scoreboard &sb) {
 
 void scoreboard_save(const Scoreboard &sb) {
     File f = SD.open(SCORE_FILE, FILE_WRITE);
-    if (!f) return;
-    f.write((const uint8_t *)&sb, sizeof(sb));
-    f.close();
+    if (f) { f.write((const uint8_t *)&sb, sizeof(sb)); f.close(); }
+    // Always save to NVS
+    Preferences prefs;
+    prefs.begin("badge", false);
+    prefs.putBytes("scores", &sb, sizeof(sb));
+    prefs.end();
 }
 
 #else
