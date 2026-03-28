@@ -58,3 +58,21 @@ data validation step (no callsign/tag present).
 For full badge-to-badge simulation, use:
 - A second ESP32 running badge firmware
 - A Linux machine with BlueZ (supports raw HCI advertising)
+
+## BLE Test Suite (Serial)
+
+Comprehensive BLE testing via serial commands (no Bluetooth permissions needed):
+
+```bash
+python3 tools/ble-scanner/ble_test.py --port /dev/cu.usbserial-110
+```
+
+Tests: BLE status, crew roster, messaging, history, notifications, RSSI lookup,
+BLE restart, callsign updates, BLE during game, rapid commands, concurrent
+operations (bling+nav+BLE), game lifecycle with BLE, message stress, heap stability.
+
+For visual BLE verification, run the Mac scanner in a separate terminal:
+
+```bash
+open tools/ble-scanner/BLEScan.app --args monitor
+```
