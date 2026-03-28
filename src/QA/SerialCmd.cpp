@@ -223,8 +223,61 @@ static void ach_handler(const char *args) {
 
 // --- ble ---
 static void ble_handler(const char *args) {
-    if (strcmp(args, "status") == 0) { serial_cmd_log("BLE", "nearby=%d total=%d", ble_presence_nearby_count(), ble_presence_total_count()); }
-    else serial_cmd_log("BLE", "error=unknown args=%s", args);
+    if (strcmp(args, "status") == 0) {
+        serial_cmd_log("BLE", "nearby=%d total=%d",
+            ble_presence_nearby_count(), ble_presence_total_count());
+    }
+    else if (strcmp(args, "crew") == 0) {
+        const CrewEntry *crew = ble_presence_get_crew();
+        int count = ble_presence_get_crew_count();
+        serial_cmd_log("BLE", "crew_count=%d", count);
+        uint32_t now = millis();
+        for (int i = 0; i < count; i++) {
+            bool nearby = (now - crew[i].last_seen_ms < 30000);
+            Serial.printf("  %s score=%d rssi=%d %s met=%lu\n",
+                crew[i].callsign, crew[i].high_score, crew[i].rssi,
+                nearby ? "NEARBY" : "away", crew[i].first_seen_met);
+        }
+    }
+    else if (strncmp(args, "send ", 5) == 0) {
+        int id = atoi(args + 5);
+        ble_presence_send_message(id);
+        serial_cmd_log("BLE", "sent msg=%d text=%s", id, ble_presence_get_message_text(id));
+    }
+    else if (strcmp(args, "messages") == 0) {
+        serial_cmd_log("BLE", "preset_messages=%d", BLE_NUM_MESSAGES);
+        for (int i = 1; i <= BLE_NUM_MESSAGES; i++)
+            Serial.printf("  %d: %s\n", i, ble_presence_get_message_text(i));
+    }
+    else if (strcmp(args, "history") == 0) {
+        int count = ble_presence_msg_history_count();
+        serial_cmd_log("BLE", "history_count=%d", count);
+        for (int i = 0; i < count && i < 20; i++) {
+            Serial.printf("  %s: %s\n",
+                ble_presence_msg_history_sender(i),
+                ble_presence_get_message_text(ble_presence_msg_history_msg_id(i)));
+        }
+    }
+    else if (strcmp(args, "notify") == 0) {
+        if (ble_presence_has_notification()) {
+            serial_cmd_log("BLE", "notification=%s", ble_presence_get_notification());
+            ble_presence_clear_notification();
+        } else {
+            serial_cmd_log("BLE", "notification=none");
+        }
+    }
+    else if (strncmp(args, "rssi ", 5) == 0) {
+        int8_t rssi = ble_presence_get_rssi(args + 5);
+        serial_cmd_log("BLE", "callsign=%s rssi=%d %s", args + 5, rssi, rssi ? "nearby" : "not_found");
+    }
+    else if (strcmp(args, "restart") == 0) {
+        ble_presence_stop();
+        ble_presence_restart();
+        serial_cmd_log("BLE", "restarted");
+    }
+    else {
+        serial_cmd_log("BLE", "error=unknown args=%s", args);
+    }
 }
 
 // --- game ---
@@ -269,7 +322,7 @@ void serial_cmd_init() {
     serial_cmd_register("callsign", callsign_handler, "get, set <name>");
     serial_cmd_register("screensaver", screensaver_handler, "mode <n>, status, list");
     serial_cmd_register("achievements", ach_handler, "status, list, unlock <id>");
-    serial_cmd_register("ble", ble_handler, "status");
+    serial_cmd_register("ble", ble_handler, "status, crew, send <n>, messages, history, notify, rssi <callsign>, restart");
     serial_cmd_register("game", game_handler, "state, start [0-2], stop");
     serial_cmd_log("INIT", "bstp_v1 ready firmware=%s handlers=%d", BADGE_VERSION, s_handler_count);
 }
