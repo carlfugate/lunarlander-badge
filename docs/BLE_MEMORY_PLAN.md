@@ -364,3 +364,27 @@ canvas entirely and works regardless of BLE stack choice.
 
 6. **`ble_presence_stop()` / `ble_presence_restart()` already exist** in the codebase,
    making lazy BLE a low-effort option if needed.
+
+## NimBLE Integration Status (March 28, 2026)
+
+### Completed
+- Switched from Bluedroid to NimBLE-Arduino — saves ~13KB static RAM
+- LV_MEM_SIZE reduced 64K→48K — saves 16KB
+- max_block after boot: 172KB (18KB margin over 153KB canvas)
+- Game canvas allocates and renders with BLE active
+- BLE scanner tool for macOS (tools/ble-scanner/)
+- Auth tag (2-byte shared secret) for anti-spoofing
+- Input validation + flood protection
+- FF_BLE_NO_AUTH feature flag for testing
+
+### Known Issues
+- Advertisement not refreshed after callsign/score/status changes (tracked in #94)
+- Company ID overlap: bytes 0-1 of manufacturer data are BLE company ID, overlaps with callsign. Mac scanner works around this. Badge-to-badge unaffected.
+- 2KB margin was tight before LV_MEM_SIZE reduction. Now 18KB — comfortable.
+- Min heap during game: ~8-25KB (tight but functional)
+
+### Test Results
+- Mac BLE scan: detects badge, parses callsign/score/status/tag correctly
+- 500-op stress test with BLE active: PASS, no hangs
+- 8-hour overnight stress (without BLE): PASS, 9352 ops, 0 leaks
+- BLE + game concurrent: PASS
