@@ -19,6 +19,8 @@ import sys
 import time
 from datetime import datetime
 
+DEFAULT_SERIAL_PORT = '/dev/cu.usbserial-110'
+
 try:
     from bleak import BleakScanner
 except ImportError:
@@ -131,6 +133,74 @@ async def monitor():
         print(f'  {b["callsign"]:12s} last_rssi={b["rssi"]} score={b["score"]}')
 
 
+def serial_cmd(ser, cmd, drain_delay=1):
+    """Send a serial command and drain response."""
+    ser.reset_input_buffer()
+    ser.write(f'{cmd}\r\n'.encode())
+    time.sleep(drain_delay)
+    resp = ser.read(ser.in_waiting).decode('utf-8', errors='replace')
+    return resp
+
+
+async def test_ble(serial_port=None):
+    """BLE integration test: scan + serial commands to verify advertisement updates."""
+    import serial as pyserial
+
+    print('=== BLE Integration Test ===')
+
+    # Step 1: Scan for badge
+    print('\n--- Step 1: Verify badge advertisement ---')
+    badges = await scan(10)
+    if not badges:
+        print('FAIL: No badge found')
+        return
+
+    badge = list(badges.values())[0]
+    print(f'Badge found: {badge["callsign"]} score={badge["score"]} status={badge["status"]}')
+
+    if not serial_port:
+        print('No serial port specified, skipping serial tests')
+        return
+
+    ser = pyserial.Serial(serial_port, 115200, timeout=3)
+    time.sleep(1)
+
+    # Get current callsign
+    resp = serial_cmd(ser, 'callsign.get')
+    print(f'Serial response: {resp.strip()}')
+
+    # Step 2: Change callsign via serial, verify advertisement updates
+    print('\n--- Step 2: Callsign change test ---')
+    serial_cmd(ser, 'callsign.set BLETEST', 2)
+
+    print('Scanning for updated callsign...')
+    badges2 = await scan(10)
+    found_new = any(b['callsign'] == 'BLETEST' for b in badges2.values())
+    print(f'  Callsign update: {"PASS" if found_new else "FAIL"}')
+
+    # Restore callsign
+    serial_cmd(ser, f'callsign.set {badge["callsign"]}')
+
+    # Step 3: Start game, verify status changes
+    print('\n--- Step 3: Game status test ---')
+    serial_cmd(ser, 'game.start 0', 2)
+
+    print('Scanning for playing status...')
+    badges3 = await scan(10)
+    found_playing = any(b['status'] == 'playing' for b in badges3.values())
+    print(f'  Status=playing: {"PASS" if found_playing else "FAIL"}')
+
+    serial_cmd(ser, 'game.stop')
+
+    # Step 4: Check BLE status via serial
+    print('\n--- Step 4: BLE status check ---')
+    resp = serial_cmd(ser, 'ble.status')
+    print(f'  BLE status: {resp.strip()}')
+
+    ser.close()
+    print('\n=== BLE Integration Test Complete ===')
+
+
 def main():
     args = sys.argv[1:]
     mode = args[0] if args else 'scan'
@@ -140,8 +210,17 @@ def main():
         asyncio.run(scan(duration))
     elif mode == 'monitor':
         asyncio.run(monitor())
+    elif mode == 'test':
+        port = args[1] if len(args) > 1 else DEFAULT_SERIAL_PORT
+        asyncio.run(test_ble(port))
+    elif mode == 'simulate':
+        from simulate import simulate
+        callsign = args[1] if len(args) > 1 else 'SIMTEST'
+        score = int(args[2]) if len(args) > 2 else 999
+        duration = int(args[3]) if len(args) > 3 else 60
+        simulate(callsign, score, duration)
     else:
-        print('Usage: scan [seconds] | monitor')
+        print('Usage: scan [seconds] | monitor | test [serial_port] | simulate [callsign] [score] [duration]')
 
 
 if __name__ == '__main__':
