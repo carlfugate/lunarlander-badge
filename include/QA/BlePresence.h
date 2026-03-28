@@ -27,6 +27,8 @@ int ble_presence_total_count();   // total unique badges ever seen
 const CrewEntry* ble_presence_get_crew();
 int ble_presence_get_crew_count();
 void create_crew_log_window();
+int8_t ble_presence_get_rssi(const char *callsign);
+void create_find_friend_window(const char *callsign);
 void ble_presence_send_message(uint8_t msg_id);
 const char* ble_presence_get_message_text(uint8_t msg_id);
 void create_comms_window();

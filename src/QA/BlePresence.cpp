@@ -345,6 +345,16 @@ bool ble_presence_has_notification() { return s_has_notification; }
 const char* ble_presence_get_notification() { return s_last_notification; }
 void ble_presence_clear_notification() { s_has_notification = false; }
 
+int8_t ble_presence_get_rssi(const char *callsign) {
+    for (int i = 0; i < s_crew_count; i++) {
+        if (strcmp(s_crew[i].callsign, callsign) == 0) {
+            if (millis() - s_crew[i].last_seen_ms < 30000) return s_crew[i].rssi;
+            return 0;
+        }
+    }
+    return 0;
+}
+
 void create_comms_window() {
     lv_obj_t *scr = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
@@ -440,6 +450,97 @@ void create_comms_window() {
     lv_obj_center(bl);
 }
 
+// Find friend screen
+static char s_find_target[BLE_CALLSIGN_LEN + 1] = "";
+static lv_obj_t *s_find_bar = NULL;
+static lv_obj_t *s_find_rssi_label = NULL;
+static lv_obj_t *s_find_hint_label = NULL;
+static lv_timer_t *s_find_timer = NULL;
+
+static void find_timer_cb(lv_timer_t *t) {
+    if (lv_scr_act() != lv_obj_get_parent(s_find_bar)) {
+        lv_timer_del(t); s_find_timer = NULL; return;
+    }
+    int8_t rssi = ble_presence_get_rssi(s_find_target);
+    if (rssi == 0) {
+        lv_bar_set_value(s_find_bar, -100, LV_ANIM_ON);
+        lv_label_set_text(s_find_rssi_label, "Not nearby");
+        lv_obj_set_style_text_color(s_find_rssi_label, lv_color_hex(0x888888), 0);
+        lv_label_set_text(s_find_hint_label, "");
+    } else {
+        lv_bar_set_value(s_find_bar, rssi, LV_ANIM_ON);
+        lv_label_set_text_fmt(s_find_rssi_label, "%d dBm", rssi);
+        if (rssi > -40) {
+            lv_obj_set_style_text_color(s_find_rssi_label, lv_color_hex(0x00c853), 0);
+            lv_label_set_text(s_find_hint_label, "Very close!");
+        } else if (rssi > -60) {
+            lv_obj_set_style_text_color(s_find_rssi_label, lv_color_hex(0x00e5ff), 0);
+            lv_label_set_text(s_find_hint_label, "Nearby");
+        } else if (rssi > -80) {
+            lv_obj_set_style_text_color(s_find_rssi_label, lv_color_hex(0xffab00), 0);
+            lv_label_set_text(s_find_hint_label, "In range");
+        } else {
+            lv_obj_set_style_text_color(s_find_rssi_label, lv_color_hex(0xff4444), 0);
+            lv_label_set_text(s_find_hint_label, "Far away");
+        }
+    }
+}
+
+void create_find_friend_window(const char *callsign) {
+    strncpy(s_find_target, callsign, BLE_CALLSIGN_LEN);
+    s_find_target[BLE_CALLSIGN_LEN] = '\0';
+
+    lv_obj_t *scr = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(scr, lv_color_hex(0x0a0a0f), 0);
+    load_screen_and_delete_old(scr);
+
+    lv_obj_t *hdr = lv_label_create(scr);
+    lv_label_set_text_fmt(hdr, "TRACKING: %s", s_find_target);
+    lv_obj_set_style_text_color(hdr, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_text_font(hdr, &lv_font_unscii_8, 0);
+    lv_obj_align(hdr, LV_ALIGN_TOP_LEFT, 8, 8);
+
+    lv_obj_t *line = lv_obj_create(scr);
+    lv_obj_set_size(line, 312, 1);
+    lv_obj_set_pos(line, 4, 22);
+    lv_obj_set_style_bg_color(line, lv_color_hex(0x00e5ff), 0);
+    lv_obj_set_style_border_width(line, 0, 0);
+    lv_obj_set_style_radius(line, 0, 0);
+    lv_obj_set_style_pad_all(line, 0, 0);
+    lv_obj_clear_flag(line, LV_OBJ_FLAG_SCROLLABLE);
+
+    s_find_bar = lv_bar_create(scr);
+    lv_obj_set_size(s_find_bar, 280, 30);
+    lv_obj_align(s_find_bar, LV_ALIGN_CENTER, 0, -20);
+    lv_bar_set_range(s_find_bar, -100, -20);
+    lv_obj_set_style_bg_color(s_find_bar, lv_color_hex(0x222222), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(s_find_bar, lv_color_hex(0x00e5ff), LV_PART_INDICATOR);
+
+    s_find_rssi_label = lv_label_create(scr);
+    lv_obj_set_style_text_font(s_find_rssi_label, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(s_find_rssi_label, lv_color_hex(0xcccccc), 0);
+    lv_obj_align(s_find_rssi_label, LV_ALIGN_CENTER, 0, 30);
+    lv_label_set_text(s_find_rssi_label, "Searching...");
+
+    s_find_hint_label = lv_label_create(scr);
+    lv_obj_set_style_text_color(s_find_hint_label, lv_color_hex(0x888888), 0);
+    lv_obj_align(s_find_hint_label, LV_ALIGN_CENTER, 0, 60);
+    lv_label_set_text(s_find_hint_label, "");
+
+    if (s_find_timer) lv_timer_del(s_find_timer);
+    s_find_timer = lv_timer_create(find_timer_cb, 2000, NULL);
+
+    lv_obj_t *back = lv_btn_create(scr);
+    lv_obj_set_size(back, 80, 28);
+    lv_obj_align(back, LV_ALIGN_BOTTOM_MID, 0, -4);
+    lv_obj_set_style_bg_color(back, lv_color_hex(0x222222), 0);
+    lv_obj_add_event_cb(back, [](lv_event_t *e) { create_crew_log_window(); }, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *bl = lv_label_create(back);
+    lv_label_set_text(bl, LV_SYMBOL_LEFT " BACK");
+    lv_obj_set_style_text_color(bl, lv_color_hex(0x888888), 0);
+    lv_obj_center(bl);
+}
+
 // Crew log screen
 void create_crew_log_window() {
     lv_obj_t *scr = lv_obj_create(NULL);
@@ -491,6 +592,11 @@ void create_crew_log_window() {
             lv_obj_set_style_text_color(row, nearby ? lv_color_hex(0x00c853) : lv_color_hex(0x666666), 0);
             lv_obj_set_style_text_font(row, &lv_font_unscii_8, 0);
             lv_obj_set_pos(row, 4, i * 16);
+            lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_add_event_cb(row, [](lv_event_t *e) {
+                const char *name = (const char *)lv_event_get_user_data(e);
+                create_find_friend_window(name);
+            }, LV_EVENT_CLICKED, (void*)s_crew[i].callsign);
         }
     }
 
@@ -516,6 +622,8 @@ int ble_presence_total_count() { return 0; }
 const CrewEntry *ble_presence_get_crew() { return nullptr; }
 int ble_presence_get_crew_count() { return 0; }
 void create_crew_log_window() {}
+int8_t ble_presence_get_rssi(const char *) { return 0; }
+void create_find_friend_window(const char *) {}
 void ble_presence_send_message(uint8_t) {}
 const char* ble_presence_get_message_text(uint8_t) { return ""; }
 void create_comms_window() {}
