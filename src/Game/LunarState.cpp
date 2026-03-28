@@ -306,6 +306,7 @@ static void game_tick_cb(lv_timer_t *t) {
     if (gs.phase == PHASE_LANDED) {
         lv_timer_del(game_timer);
         game_timer = NULL;
+        Serial.printf("[GAME] landed score=%d fuel=%d elapsed=%lu\n", gs.score, (int)gs.lander.fuel, gs.elapsed_ms);
         audio_thrust_stop();
         audio_landed();
         leds_landed();
@@ -316,6 +317,7 @@ static void game_tick_cb(lv_timer_t *t) {
     } else if (gs.phase == PHASE_CRASHED) {
         lv_timer_del(game_timer);
         game_timer = NULL;
+        Serial.printf("[GAME] crashed elapsed=%lu\n", gs.elapsed_ms);
         audio_thrust_stop();
         audio_crashed();
         leds_crashed();
@@ -587,6 +589,8 @@ static void show_game_over() {
     lv_obj_center(ml);
 }
 
+const GameState* game_get_state() { return &gs; }
+
 void lunar_lander_start() {
     stop_menu_timers();
     bling_stop_animation();
@@ -596,6 +600,41 @@ void lunar_lander_start() {
     leds_idle();
     scoreboard_load(scoreboard);
     show_mode_select();
+}
+
+void game_start_at_difficulty(uint8_t difficulty) {
+    if (!game_screen) {
+        stop_menu_timers();
+        bling_stop_animation();
+        game_screen = lv_obj_create(NULL);
+        lv_obj_set_style_bg_color(game_screen, lv_color_black(), 0);
+        load_screen_and_delete_old(game_screen);
+        leds_idle();
+        scoreboard_load(scoreboard);
+    }
+    lv_obj_clean(game_screen);
+    gs.mode = MODE_OFFLINE;
+    game_init(gs, difficulty, (uint32_t)millis());
+    gs.phase = PHASE_PLAYING;
+    gs.start_ms = millis();
+    gs.last_tick_ms = gs.start_ms;
+    input_init();
+    renderer_init(game_screen);
+    was_thrusting = false;
+    solo_last_rotate = 0;
+    if (game_timer) { lv_timer_del(game_timer); game_timer = NULL; }
+    game_timer = lv_timer_create(game_tick_cb, 16, NULL);
+}
+
+void game_cleanup() {
+    if (game_timer) { lv_timer_del(game_timer); game_timer = NULL; }
+    if (spectate_timer) { lv_timer_del(spectate_timer); spectate_timer = NULL; }
+    if (mp_timer) { lv_timer_del(mp_timer); mp_timer = NULL; }
+    audio_thrust_stop();
+    leds_idle();
+    renderer_cleanup();
+    game_screen = NULL;
+    gs.phase = PHASE_MENU;  // reset so game.stop guard works
 }
 
 void lunar_lander_stop() {
@@ -619,6 +658,7 @@ void lunar_lander_stop() {
     renderer_cleanup();
     game_screen = NULL;
     was_thrusting = false;
+    gs.phase = PHASE_MENU;
     create_main_menu(false);
 }
 #endif

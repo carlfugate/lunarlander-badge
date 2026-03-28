@@ -36,4 +36,5 @@ void create_credits_window();
 void create_checkin_window();
 void create_badge_card_window();
 void create_system_submenu();
+void create_ota_window();
 bool isVersionNewer(const String& online, const String& local);

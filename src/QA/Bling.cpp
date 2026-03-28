@@ -248,27 +248,6 @@ void create_bling_window() {
     lv_obj_center(bl);
 }
 
-#ifdef FF_SERIAL_TEST
-#include "QA/SerialCmd.h"
-static void bling_serial_handler(const char *args) {
-    if (strncmp(args, "set ", 4) == 0) {
-        int mode = atoi(args + 4);
-        start_bling_animation(mode);
-        serial_cmd_log("BLING", "mode=%d", mode);
-    } else if (strcmp(args, "off") == 0) {
-        start_bling_animation(0);
-        serial_cmd_log("BLING", "mode=0");
-    } else if (strcmp(args, "status") == 0) {
-        serial_cmd_log("BLING", "mode=%d", bling_mode);
-    } else if (strcmp(args, "list") == 0) {
-        serial_cmd_log("BLING", "0=off 1=rainbow 2=police 3=blink 4=chase 5=random 6=breathe 7=aurora 8=morse 9=comet 10=fire 11=sparkle");
-    } else {
-        serial_cmd_log("BLING", "error=unknown args=%s", args);
-    }
-}
-void serial_register_bling() {
-    serial_cmd_register("bling", bling_serial_handler, "set <n>, off, status, list");
-}
-#else
-void serial_register_bling() {}
-#endif
+void bling_set_mode(int mode) { start_bling_animation(mode); }
+int bling_get_mode() { return bling_mode; }
+

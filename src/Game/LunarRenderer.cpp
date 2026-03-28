@@ -68,6 +68,7 @@ static void draw_line(lv_obj_t *c, int16_t x1, int16_t y1, int16_t x2, int16_t y
 }
 
 void renderer_init(lv_obj_t *parent) {
+    renderer_cleanup();  // prevent leak if called twice without cleanup
     generate_stars();
     cam = {0, 0, 0, 0, 0};
 

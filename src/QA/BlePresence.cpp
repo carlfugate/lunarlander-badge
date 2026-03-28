@@ -416,28 +416,3 @@ void ble_presence_clear_notification() {}
 
 #endif
 
-#ifdef FF_SERIAL_TEST
-#include "QA/SerialCmd.h"
-static void ble_serial_handler(const char *args) {
-    if (strcmp(args, "status") == 0) {
-        serial_cmd_log("BLE", "nearby=%d total=%d", ble_presence_nearby_count(), ble_presence_total_count());
-    } else if (strncmp(args, "send ", 5) == 0) {
-        int id = atoi(args + 5);
-        ble_presence_send_message(id);
-        serial_cmd_log("BLE", "sent msg=%d", id);
-    } else if (strcmp(args, "crew") == 0) {
-        const CrewEntry *crew = ble_presence_get_crew();
-        int count = ble_presence_get_crew_count();
-        serial_cmd_log("BLE", "crew_count=%d", count);
-        for (int i = 0; i < count; i++)
-            Serial.printf("  %s score=%d rssi=%d\n", crew[i].callsign, crew[i].high_score, crew[i].rssi);
-    } else {
-        serial_cmd_log("BLE", "error=unknown args=%s", args);
-    }
-}
-void serial_register_ble() {
-    serial_cmd_register("ble", ble_serial_handler, "status, send <n>, crew");
-}
-#else
-void serial_register_ble() {}
-#endif
