@@ -10,3 +10,5 @@
 #define FF_TESTING           0
 
 // #define FF_SERIAL_TEST  // Uncomment or add -DFF_SERIAL_TEST for test builds
+
+// #define FF_BLE_NO_AUTH  // Disable BLE auth tag verification for testing

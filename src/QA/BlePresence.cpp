@@ -1,4 +1,5 @@
 #include "QA/BlePresence.h"
+#include "FeatureFlags.h"
 #include "QA/Menu.h"
 #include "Hardware/NeoPixelControl.h"
 #include "pins.h"
@@ -98,7 +99,11 @@ static void process_result(BLEAdvertisedDevice *dev) {
     if (!dev->isAdvertisingService(BLEUUID((uint16_t)BSIDES_SERVICE_UUID))) return;
 
     std::string mfg = dev->getManufacturerData();
+#ifdef FF_BLE_NO_AUTH
+    if (mfg.length() < 13) return; // minimum: callsign(10) + score(2) + status(1)
+#else
     if (mfg.length() < 16) return; // reject short payloads (no auth tag)
+#endif
 
     char callsign[BLE_CALLSIGN_LEN + 1];
     memcpy(callsign, mfg.data(), BLE_CALLSIGN_LEN);
@@ -120,9 +125,11 @@ static void process_result(BLEAdvertisedDevice *dev) {
     if (score > 10000) return;
 
     // Verify authentication tag
+#ifndef FF_BLE_NO_AUTH
     uint16_t received_tag = (uint8_t)mfg[14] | ((uint8_t)mfg[15] << 8);
     uint16_t expected_tag = compute_tag(callsign, score);
     if (received_tag != expected_tag) return;
+#endif
 
     int8_t rssi = dev->getRSSI();
     uint32_t now = millis();
