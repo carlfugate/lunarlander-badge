@@ -5,10 +5,7 @@
 
 #ifndef NATIVE_TEST
 
-#include <BLEDevice.h>
-#include <BLEAdvertising.h>
-#include <BLEScan.h>
-#include <BLEUtils.h>
+#include <NimBLEDevice.h>
 #include <Adafruit_NeoPixel.h>
 #include <lvgl.h>
 
@@ -69,7 +66,7 @@ static void start_advertising() {
     mfg_data[13] = s_msg_id;
 
     BLEAdvertisementData advData;
-    advData.setFlags(ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT);
+    advData.setFlags(0x06);  // General Discoverable + BR/EDR Not Supported
     advData.setCompleteServices(BLEUUID((uint16_t)BSIDES_SERVICE_UUID));
     advData.setManufacturerData(std::string((char *)mfg_data, 14));
 
@@ -79,11 +76,11 @@ static void start_advertising() {
     pAdv->start();
 }
 
-static void process_result(BLEAdvertisedDevice &dev) {
-    if (!dev.haveServiceUUID()) return;
-    if (!dev.isAdvertisingService(BLEUUID((uint16_t)BSIDES_SERVICE_UUID))) return;
+static void process_result(BLEAdvertisedDevice *dev) {
+    if (!dev->haveServiceUUID()) return;
+    if (!dev->isAdvertisingService(BLEUUID((uint16_t)BSIDES_SERVICE_UUID))) return;
 
-    std::string mfg = dev.getManufacturerData();
+    std::string mfg = dev->getManufacturerData();
     if (mfg.length() < 13) return;
 
     char callsign[BLE_CALLSIGN_LEN + 1];
@@ -96,7 +93,7 @@ static void process_result(BLEAdvertisedDevice &dev) {
     if (strcmp(callsign, s_callsign) == 0) return;
 
     uint16_t score = (uint8_t)mfg[10] | ((uint8_t)mfg[11] << 8);
-    int8_t rssi = dev.getRSSI();
+    int8_t rssi = dev->getRSSI();
     uint32_t now = millis();
     uint32_t met = (now - badge_boot_ms) / 1000;
 
@@ -145,7 +142,7 @@ static void process_result(BLEAdvertisedDevice &dev) {
 }
 
 class ScanCallbacks : public BLEAdvertisedDeviceCallbacks {
-    void onResult(BLEAdvertisedDevice advertisedDevice) override {
+    void onResult(BLEAdvertisedDevice* advertisedDevice) override {
         process_result(advertisedDevice);
     }
 };

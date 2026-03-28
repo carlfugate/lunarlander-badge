@@ -186,10 +186,9 @@ void setup() {
     achievements_init();
     Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "achievements_init", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 
-    // BLE disabled — causes heap fragmentation preventing game canvas allocation.
-    // See issue #88. Social features (presence, crew roster, comms) backlogged.
-    // ble_presence_init(callsign_get(), 0);
-    Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "ble_skipped", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
+    // BLE presence — NimBLE stack (lightweight, ~100KB less RAM than Bluedroid)
+    ble_presence_init(callsign_get(), 0);
+    Serial.printf("[BOOT] %-20s heap=%d max_block=%d\n", "ble_init", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
 
     serial_cmd_init();
 
