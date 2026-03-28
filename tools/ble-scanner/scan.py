@@ -36,6 +36,7 @@ def parse_badge_data(device, ad):
             score = 0
             status = 0
             msg_id = 0
+            tag = None
             for key, value in ad.manufacturer_data.items():
                 raw = bytes(value)
                 if len(raw) >= 10:
@@ -46,11 +47,14 @@ def parse_badge_data(device, ad):
                     status = raw[12]
                 if len(raw) >= 14:
                     msg_id = raw[13]
+                if len(raw) >= 16:
+                    tag = raw[14] | (raw[15] << 8)
             return {
                 'callsign': callsign,
                 'score': score,
                 'status': ['idle', 'playing', 'menu'][status] if status < 3 else f'unknown({status})',
                 'msg_id': msg_id,
+                'tag': tag,
                 'rssi': ad.rssi,
                 'address': device.address,
                 'name': device.name,
@@ -81,7 +85,8 @@ async def scan(duration=10):
 
     print(f'\n=== Found {len(badges)} badge(s) ===')
     for addr, b in badges.items():
-        print(f'  {b["callsign"]:12s} rssi={b["rssi"]:4d}  score={b["score"]:5d}  status={b["status"]:8s}  seen={b["count"]}x  addr={addr}')
+        tag_str = f'  tag=0x{b["tag"]:04X}' if b.get('tag') is not None else '  tag=NONE'
+        print(f'  {b["callsign"]:12s} rssi={b["rssi"]:4d}  score={b["score"]:5d}  status={b["status"]:8s}  seen={b["count"]}x{tag_str}  addr={addr}')
         if b['msg_id'] > 0:
             print(f'                 message_id={b["msg_id"]}')
 

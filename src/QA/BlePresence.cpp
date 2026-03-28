@@ -12,9 +12,23 @@
 // BSidesKC custom service UUID (16-bit)
 #define BSIDES_SERVICE_UUID 0xBD26
 
+// Conference-wide secret — baked into firmware, not public
+#define BLE_AUTH_KEY 0xB51D  // "BSID" — change before conference
+
 static char s_callsign[BLE_CALLSIGN_LEN + 1] = "PILOT";
 static uint16_t s_score = 0;
 static uint8_t s_status = 0;
+
+static uint16_t compute_tag(const char *callsign, uint16_t score) {
+    uint16_t hash = BLE_AUTH_KEY;
+    for (int i = 0; i < BLE_CALLSIGN_LEN && callsign[i]; i++) {
+        hash ^= ((uint16_t)callsign[i] << (i % 8));
+        hash = (hash << 3) | (hash >> 13); // rotate
+    }
+    hash ^= score;
+    hash ^= (hash >> 8);
+    return hash;
+}
 
 static const char* preset_messages[] = {
     "",                          // 0 = none
@@ -56,19 +70,22 @@ static void start_advertising() {
     BLEAdvertising *pAdv = BLEDevice::getAdvertising();
     pAdv->stop();
 
-    // Manufacturer data: callsign(10) + score(2) + status(1) + msg_id(1)
-    uint8_t mfg_data[14];
+    // Manufacturer data: callsign(10) + score(2) + status(1) + msg_id(1) + tag(2)
+    uint8_t mfg_data[16];
     memset(mfg_data, 0, sizeof(mfg_data));
     memcpy(mfg_data, s_callsign, strlen(s_callsign));
     mfg_data[10] = s_score & 0xFF;
     mfg_data[11] = (s_score >> 8) & 0xFF;
     mfg_data[12] = s_status;
     mfg_data[13] = s_msg_id;
+    uint16_t tag = compute_tag(s_callsign, s_score);
+    mfg_data[14] = tag & 0xFF;
+    mfg_data[15] = (tag >> 8) & 0xFF;
 
     BLEAdvertisementData advData;
     advData.setFlags(0x06);  // General Discoverable + BR/EDR Not Supported
     advData.setCompleteServices(BLEUUID((uint16_t)BSIDES_SERVICE_UUID));
-    advData.setManufacturerData(std::string((char *)mfg_data, 14));
+    advData.setManufacturerData(std::string((char *)mfg_data, 16));
 
     pAdv->setAdvertisementData(advData);
     pAdv->setMinInterval(0x50);
@@ -81,7 +98,7 @@ static void process_result(BLEAdvertisedDevice *dev) {
     if (!dev->isAdvertisingService(BLEUUID((uint16_t)BSIDES_SERVICE_UUID))) return;
 
     std::string mfg = dev->getManufacturerData();
-    if (mfg.length() < 13) return;
+    if (mfg.length() < 16) return; // reject short payloads (no auth tag)
 
     char callsign[BLE_CALLSIGN_LEN + 1];
     memcpy(callsign, mfg.data(), BLE_CALLSIGN_LEN);
@@ -89,10 +106,24 @@ static void process_result(BLEAdvertisedDevice *dev) {
     for (int i = BLE_CALLSIGN_LEN - 1; i >= 0 && callsign[i] == '\0'; i--)
         callsign[i] = '\0';
 
+    // Validate callsign: printable ASCII only, non-empty
     if (callsign[0] == '\0') return;
+    for (int i = 0; callsign[i]; i++) {
+        if (callsign[i] < 0x20 || callsign[i] > 0x7E) return;
+    }
+
     if (strcmp(callsign, s_callsign) == 0) return;
 
     uint16_t score = (uint8_t)mfg[10] | ((uint8_t)mfg[11] << 8);
+
+    // Validate score range
+    if (score > 10000) return;
+
+    // Verify authentication tag
+    uint16_t received_tag = (uint8_t)mfg[14] | ((uint8_t)mfg[15] << 8);
+    uint16_t expected_tag = compute_tag(callsign, score);
+    if (received_tag != expected_tag) return;
+
     int8_t rssi = dev->getRSSI();
     uint32_t now = millis();
     uint32_t met = (now - badge_boot_ms) / 1000;
@@ -109,6 +140,13 @@ static void process_result(BLEAdvertisedDevice *dev) {
         s_crew[idx].last_seen_ms = now;
         s_crew[idx].new_discovery = false;
     } else if (s_crew_count < BLE_MAX_CREW) {
+        // Flood protection: max 3 new discoveries per 5 seconds
+        static uint32_t discovery_times[3] = {0};
+        static int discovery_idx = 0;
+        if (now - discovery_times[discovery_idx] < 5000) return;
+        discovery_times[discovery_idx] = now;
+        discovery_idx = (discovery_idx + 1) % 3;
+
         idx = s_crew_count++;
         strncpy(s_crew[idx].callsign, callsign, BLE_CALLSIGN_LEN);
         s_crew[idx].callsign[BLE_CALLSIGN_LEN] = '\0';
@@ -124,9 +162,10 @@ static void process_result(BLEAdvertisedDevice *dev) {
         s_new_discovery_pulse = true;
     }
 
-    // Parse message_id (byte 14)
+    // Parse message_id (byte 14) with validation
     if (idx >= 0) {
-        uint8_t msg_id = (mfg.length() >= 14) ? (uint8_t)mfg[13] : 0;
+        uint8_t msg_id = (uint8_t)mfg[13];
+        if (msg_id > BLE_NUM_MESSAGES) msg_id = 0; // clamp invalid
         if (msg_id != 0 && msg_id <= BLE_NUM_MESSAGES) {
             if (s_crew[idx].last_msg_id != msg_id || now - s_crew[idx].last_msg_ms > 10000) {
                 s_crew[idx].last_msg_id = msg_id;
